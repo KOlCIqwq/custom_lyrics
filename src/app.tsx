@@ -16,7 +16,6 @@ function showLyricsPage() {
                    document.querySelector('.Root__main-view');
   
   if (!mainView) {
-    console.error("[LYRICS] Could not find main view container");
     return;
   }
   
@@ -46,23 +45,23 @@ function showLyricsPage() {
   // Create the lyrics page content
   const lyricsHTML = `
     <!-- Header with proper styling -->
-    <div style="
+     <div style="
       background: var(--background-elevated-base, #181818);
       padding: 16px 32px;
       display: flex;
-      align-items: center;
+      align-items: center; /* Vertically align all items */
       position: sticky;
       top: 0;
       z-index: 10;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     ">
+      <!-- Left side: Back button -->
       <button id="lyrics-back-button" style="
         background: transparent;
         border: none;
         color: var(--text-base, #ffffff);
         cursor: pointer;
         padding: 8px;
-        margin-right: 16px;
         border-radius: 50%;
         width: 32px;
         height: 32px;
@@ -70,12 +69,18 @@ function showLyricsPage() {
         align-items: center;
         justify-content: center;
         transition: background-color 0.2s;
+        flex-shrink: 0; /* Prevent the button from shrinking */
       ">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <path d="M11.03.47a.75.75 0 0 1 0 1.06L4.56 8l6.47 6.47a.75.75 0 1 1-1.06 1.06L2.44 8 9.97.47a.75.75 0 0 1 1.06 0z"/>
         </svg>
       </button>
-      <div>
+      
+      <!-- Middle Spacer-->
+      <div style="flex-grow: 1;"></div>
+
+      <!-- Right side: Title and track info stacked vertically -->
+      <div style="text-align: right;">
         <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Lyrics</h1>
         <p id="track-info-header" style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.7;">Loading...</p>
       </div>
@@ -89,7 +94,6 @@ function showLyricsPage() {
       </div>
       
       <div id="lyrics-content" style="display: none;">
-        <!-- Lyrics will be inserted here -->
       </div>
       
       <div id="lyrics-error" style="display: none; text-align: center; padding: 64px 0;">
@@ -244,7 +248,6 @@ async function fetchAndDisplayLyrics() {
     }
     
   } catch (error) {
-    console.error("[LYRICS] Error fetching lyrics:", error);
     if (loadingEl) loadingEl.style.display = 'none';
     if (errorEl) errorEl.style.display = 'block';
     if (errorDetails) errorDetails.textContent = `${title} by ${artist}`;
@@ -285,7 +288,6 @@ function createLyricsButton() {
         setTimeout(tryCreateButton, 200);
         return;
       } else {
-        console.error("[LYRICS] Could not find suitable container for button");
         // Create floating button as fallback
         createFloatingButton();
         return;
@@ -293,13 +295,15 @@ function createLyricsButton() {
     }
     
     // Create button that matches Spotify's style
+    // Button: https://icons.getbootstrap.com
     const button = document.createElement('button');
     button.id = 'spotify-lyrics-button';
     button.className = 'Button-sc-1dqy6lx-0 Button-small-small Button-ui-variant-ghost';
     button.setAttribute('aria-label', 'Lyrics');
     button.innerHTML = `
-      <svg role="img" height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M13.426 2.574a2.831 2.831 0 0 0-4.797 1.55l3.247 3.247a2.831 2.831 0 0 0 1.55-4.797zM10.5 8.118l-2.619-2.62A63303.13 63303.13 0 0 0 4.074 9.075L2.065 11.12a1.287 1.287 0 0 0 1.816 1.816l2.06-2.06 3.68-3.68l.88-.879zM7.12 4.094a4.331 4.331 0 1 1 4.786 4.786l-3.974 3.974-3.974-3.974a4.331 4.331 0 0 1 3.162-.786z"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-layout-text-sidebar" viewBox="0 0 16 16">
+        <path d="M3.5 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM3 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m.5 2.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1z"/>
+        <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm12-1v14h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zm-1 0H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h9z"/>
       </svg>
     `;
     
@@ -355,7 +359,7 @@ function createFloatingButton() {
   button.style.cssText = `
     position: fixed;
     bottom: 100px;
-    right: 20px;
+    left: 20px;
     background: var(--background-tinted-highlight, #1db954);
     border: none;
     color: #000;
@@ -416,7 +420,6 @@ async function main() {
   }
   
   if (!window.Spicetify?.Player) {
-    console.error("[LYRICS] Spicetify not available after waiting");
     return;
   }
   
