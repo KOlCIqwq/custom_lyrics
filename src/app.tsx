@@ -175,9 +175,21 @@ async function fetchAndDisplayLyrics() {
   const errorEl = document.getElementById('lyrics-error');
   const headerInfo = document.getElementById('track-info-header');
   const errorDetails = document.getElementById('error-details');
-  
+
+  // Clear previous lyrics and hide content/loading elements
+  if (contentEl) contentEl.innerHTML = '';
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (errorEl) errorEl.style.display = 'none';
+
+  // Clear any existing highlight interval
+  if (highlightInterval) {
+    clearInterval(highlightInterval);
+    highlightInterval = null;
+  }
+  currentHighlightedLine = null;
+  currentLyrics = []; // Clear lyrics data
+
   if (!window.Spicetify?.Player?.data?.item) {
-    if (loadingEl) loadingEl.style.display = 'none';
     if (errorEl) errorEl.style.display = 'block';
     if (errorDetails) errorDetails.textContent = 'No track currently playing';
     return;
@@ -223,8 +235,17 @@ async function fetchAndDisplayLyrics() {
     displaySyncedLyrics(data);
   } catch (error) {
     if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = 'none'; // Hide lyrics content on error
     if (errorEl) errorEl.style.display = 'block';
     if (errorDetails) errorDetails.textContent = `${title} by ${artist}`;
+
+    // Clear any existing highlight interval on error
+    if (highlightInterval) {
+      clearInterval(highlightInterval);
+      highlightInterval = null;
+    }
+    currentHighlightedLine = null;
+    currentLyrics = []; // Clear lyrics data on error
   }
 }
 
@@ -238,7 +259,10 @@ function displaySyncedLyrics(data: any) {
   const errorEl = document.getElementById('lyrics-error');
 
   if (loadingEl) loadingEl.style.display = 'none';
-  if (errorEl) errorEl.style.display = 'none';
+  if (errorEl) {
+    errorEl.style.display = 'none';
+    currentLyrics = [];
+  }
   if (contentEl) contentEl.style.display = 'block';
 
   currentLyrics = [];
