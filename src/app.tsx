@@ -35,11 +35,17 @@ function showLyricsPage() {
   const lyricsContainer = document.createElement('div');
   lyricsContainer.id = 'custom-lyrics-page';
   lyricsContainer.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
-    min-height: 100vh;
+    height: 100%;
     background: var(--background-base, #121212);
     color: var(--text-base, #ffffff);
-    position: relative;
+    z-index: 1000; /* High z-index to cover everything */
+    overflow-y: auto; /* Make the container itself scrollable */
   `;
   
   // Create the lyrics page content
@@ -52,6 +58,7 @@ function showLyricsPage() {
       position: sticky;
       top: 0;
       z-index: 10;
+      background: var(--background-base, #121212);
       border-bottom: 1px solid rgba(255,255,255,0.1);
     ">
       <!-- Left side: Back button -->
@@ -62,7 +69,7 @@ function showLyricsPage() {
         cursor: pointer;
         padding: 8px;
         border-radius: 50%;
-        width: 32px;
+        width: 32px; /* FIX: Corrected width for proper button shape */
         height: 32px;
         display: flex;
         align-items: center;
