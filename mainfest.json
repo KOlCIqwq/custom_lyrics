@@ -1,6 +1,6 @@
 [
   {
-    "name": "Custom-Lyrics",
+    "name": "Custom Lyrics",
     "description": "Spicetify extension to show Lyrics",
     "preview": "custom_lyrics.png",
     "main": "custom_lyrics.js",
@@ -9,6 +9,6 @@
     "authors": [
         { "name": "KOlCI", "url": "https://github.com/KOlCIqwq" }
     ],
-    "tags": ["Lyrics"]
+    "tags": ["lyrics"]
   }
 ]
