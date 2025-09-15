@@ -46,7 +46,6 @@ function showLyricsPage() {
   const lyricsHTML = `
     <!-- Header with proper styling -->
      <div style="
-      background: var(--background-elevated-base, #181818);
       padding: 16px 32px;
       display: flex;
       align-items: center; /* Vertically align all items */
@@ -132,11 +131,23 @@ function closeLyricsPage() {
   if (!lyricsPageActive || !originalPageState) {
     return;
   }
-  
+
+  // Clear the highlighting interval
+  if (highlightInterval) {
+    clearInterval(highlightInterval);
+    highlightInterval = null;
+  }
+  currentHighlightedLine = null;
+
   // Remove lyrics container
   const lyricsContainer = document.getElementById('custom-lyrics-page');
   if (lyricsContainer) {
     lyricsContainer.remove();
+  }
+  // Remove the custom style element
+  const styleEl = document.getElementById('custom-lyrics-style');
+  if (styleEl) {
+    styleEl.remove();
   }
   
   // Restore original content visibility
@@ -202,56 +213,125 @@ async function fetchAndDisplayLyrics() {
     }
     
     const data = await response.json();
-    
-    // Parse and display lyrics
-    let lyricsToDisplay = [];
-    
-    // Try synced lyrics first
-    if (data.syncedLyrics) {
-      const lines = data.syncedLyrics.split('\n');
-      lyricsToDisplay = lines
-  .map((line: string) => {
-          const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-          if (match) {
-            const text = match[4].trim();
-            if (text) return text;
-          }
-          return null;
-        })
-        .filter(Boolean);
-    }
-    
-    // Fallback to plain lyrics
-    if (lyricsToDisplay.length === 0 && data.plainLyrics) {
-      lyricsToDisplay = data.plainLyrics
-        .split('\n')
-  .map((line: string) => line.trim())
-        .filter(Boolean);
-    }
-    
-    if (lyricsToDisplay.length > 0) {
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (contentEl) {
-        contentEl.style.display = 'block';
-        contentEl.innerHTML = lyricsToDisplay
-          .map((line: string) => `
-            <p style="
-              margin: 16px 0;
-              font-size: 18px;
-              line-height: 1.6;
-              opacity: 0.9;
-            ">${line}</p>
-          `).join('');
-      }
-    } else {
-      throw new Error('No lyrics found in response');
-    }
-    
+    displaySyncedLyrics(data);
   } catch (error) {
     if (loadingEl) loadingEl.style.display = 'none';
     if (errorEl) errorEl.style.display = 'block';
     if (errorDetails) errorDetails.textContent = `${title} by ${artist}`;
   }
+}
+
+let currentLyrics: { time: number; line: string }[] = [];
+let highlightInterval: number | null = null;
+let currentHighlightedLine: string | null = null;
+
+function displaySyncedLyrics(data: any) {
+  const contentEl = document.getElementById('lyrics-content');
+  const loadingEl = document.getElementById('lyrics-loading');
+  const errorEl = document.getElementById('lyrics-error');
+
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (errorEl) errorEl.style.display = 'none';
+  if (contentEl) contentEl.style.display = 'block';
+
+  currentLyrics = [];
+  if (highlightInterval) {
+    clearInterval(highlightInterval);
+    highlightInterval = null;
+  }
+  currentHighlightedLine = null;
+
+  if (data.syncedLyrics) {
+    const lines = data.syncedLyrics.split('\n');
+    currentLyrics = lines
+      .map((line: string) => {
+        const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
+        if (match) {
+          const minutes = parseInt(match[1], 10);
+          const seconds = parseInt(match[2], 10);
+          const milliseconds = parseInt(match[3], 10);
+          const time = minutes * 60 + seconds + milliseconds / (match[3].length === 3 ? 1000 : 100); // Handle both .xx and .xxx
+          const text = match[4].trim();
+          if (text) return { time, line: text };
+        }
+        return null;
+      })
+      .filter(Boolean) as { time: number; line: string }[];
+  }
+
+  // Fallback to plainLyrics if synced not available
+  if (currentLyrics.length === 0 && data.plainLyrics) {
+    data.plainLyrics
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter(Boolean)
+      .forEach((line: string) => currentLyrics.push({ time: 0, line })); // Assign 0 time for plain lyrics
+  }
+
+  if (contentEl) {
+    contentEl.innerHTML = currentLyrics
+      .map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line">${lyric.line}</p>`)
+      .join('');
+  }
+
+  // Add CSS for highlighting
+  const styleEl = document.createElement('style');
+  styleEl.id = 'custom-lyrics-style';
+  styleEl.textContent = `
+    .lyric-line {
+      font-size: 24px;
+      margin: 16px 0;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s, transform 0.3s;
+      text-align: center;
+    }
+    .lyric-line.active {
+      opacity: 1;
+      color: var(--text-base, #ffffff);
+      font-weight: 700;
+      transform: scale(1.05);
+    }
+  `;
+  document.head.appendChild(styleEl);
+
+  // Start highlighting interval
+  highlightInterval = window.setInterval(() => {
+    const progress = Spicetify.Player.getProgress();
+    const seconds = progress / 1000;
+
+    let activeLineIndex = -1;
+    for (let i = currentLyrics.length - 1; i >= 0; i--) {
+      if (currentLyrics[i].time <= seconds) {
+        activeLineIndex = i;
+        break;
+      }
+    }
+
+    const newActiveLineId = activeLineIndex !== -1 ? `lyric-line-${activeLineIndex}` : null;
+
+    if (newActiveLineId && newActiveLineId !== currentHighlightedLine) {
+      if (currentHighlightedLine) {
+        const prevActiveEl = document.getElementById(currentHighlightedLine);
+        if (prevActiveEl) {
+          prevActiveEl.classList.remove('active');
+        }
+      }
+      const newActiveEl = document.getElementById(newActiveLineId);
+      if (newActiveEl) {
+        newActiveEl.classList.add('active');
+        // scroll into view
+        newActiveEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      currentHighlightedLine = newActiveLineId;
+    } else if (!newActiveLineId && currentHighlightedLine) {
+      // No active line, remove highlight from previous
+      const prevActiveEl = document.getElementById(currentHighlightedLine);
+      if (prevActiveEl) {
+        prevActiveEl.classList.remove('active');
+      }
+      currentHighlightedLine = null;
+    }
+  }, 500);
 }
 
 // Create the lyrics button
@@ -429,6 +509,12 @@ async function main() {
   // Also try to create button when player state changes
   if (window.Spicetify.Player.addEventListener) {
     window.Spicetify.Player.addEventListener("songchange", () => {
+      // Clear existing interval if any
+      if (highlightInterval) {
+        clearInterval(highlightInterval);
+        highlightInterval = null;
+      }
+      currentHighlightedLine = null;
       // Refresh lyrics if page is open
       if (lyricsPageActive) {
         fetchAndDisplayLyrics();
