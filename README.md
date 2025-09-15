@@ -3,7 +3,7 @@ I enjoy humming, but I get stuck when I do not know the lyrics.
 
 Spotify sometimes fails to fetch them, even when Musixmatch has them, so I built my own.
 
-[![Screenshot](screenshot.png)](https://i.imgur.com/rvD95Ua.png)
+![Screenshot](https://raw.githubusercontent.com/KOlCIqwq/custom_lyrics/refs/heads/main/custom-lyrics.png)
 
 ## Use it
 Use it with [Spicetify](https://github.com/spicetify/spicetify-cli)
