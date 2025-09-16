@@ -17,7 +17,7 @@ Copy `custom_lyrics.js` into your Spicetify extensions directory:
 
 After putting the extension file into the correct folder, run the following command to install the extension:
 ```
-spicetify config extensions hidePodcasts.js
+spicetify config extensions custom_lyrics.js
 spicetify apply
 ```
 Note: Using the `config` command to add the extension will always append the file name to the existing extensions list. It does not replace the whole key's value.
