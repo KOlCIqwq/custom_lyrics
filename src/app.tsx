@@ -47,6 +47,7 @@ function showLyricsPage() {
     z-index: 1000; /* High z-index to cover everything */
     overflow-y: auto; /* Make the container itself scrollable */
     user-select: text; /* Allow text selection */
+    tabindex="0"; /* Make the container focusable */
   `;
   
   // Create the lyrics page content
@@ -136,6 +137,7 @@ function showLyricsPage() {
   lyricsContainer.innerHTML = lyricsHTML;
   mainView.appendChild(lyricsContainer);
   lyricsPageActive = true;
+  lyricsContainer.focus(); // Focus the container to enable keyboard events
 
   // Allow copying text and context menu
   // Not working? Seems like the hot keys are being blocked
@@ -151,26 +153,20 @@ function showLyricsPage() {
     if (e.ctrlKey && e.key === 'c') {
       const selectedText = window.getSelection()?.toString();
       if (selectedText) {
+        // Use document.execCommand('copy') directly for Ctrl+C
+        // This might be more reliable in some webview environments
         try {
-          // Attempt to copy using the modern Clipboard API
-          navigator.clipboard.writeText(selectedText).then(() => {
-            Spicetify.showNotification("Lyrics copied to clipboard!", false);
-          }).catch(err => {
-            // Fallback to document.execCommand if Clipboard API fails or is not available
-            if (document.execCommand('copy')) {
-              Spicetify.showNotification("Lyrics copied to clipboard!", false);
-            } else {
-              Spicetify.showNotification("Failed to copy lyrics.", true);
-            }
-          });
-        } catch (err) {
-          // Fallback for older browsers or restricted environments
-          if (document.execCommand('copy')) {
+          const successful = document.execCommand('copy');
+          if (successful) {
             Spicetify.showNotification("Lyrics copied to clipboard!", false);
           } else {
             Spicetify.showNotification("Failed to copy lyrics.", true);
           }
+        } catch (err) {
+          Spicetify.showNotification("Failed to copy lyrics.", true);
         }
+      } else {
+        Spicetify.showNotification("No text selected to copy.", true);
       }
       e.stopPropagation(); // Prevent event from bubbling up and being cancelled
       e.preventDefault(); // Prevent default Ctrl+C behavior
@@ -195,6 +191,8 @@ function showLyricsPage() {
   const copyButton = document.getElementById('lyrics-copy-button');
   if (copyButton) {
     copyButton.addEventListener('click', async () => {
+      // Ensure the lyrics container is focused before attempting to get selection
+      lyricsContainer.focus(); 
       const selection = window.getSelection();
       let textToCopy = '';
 
@@ -210,16 +208,22 @@ function showLyricsPage() {
       }
 
       if (textToCopy) {
+        // Create a temporary textarea to copy the text
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = textToCopy;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
         try {
-          await navigator.clipboard.writeText(textToCopy);
-          Spicetify.showNotification("Lyrics copied to clipboard!", false);
-        } catch (err) {
-          // Fallback to document.execCommand if Clipboard API fails or is not available
-          if (document.execCommand('copy')) {
+          const successful = document.execCommand('copy');
+          if (successful) {
             Spicetify.showNotification("Lyrics copied to clipboard!", false);
           } else {
             Spicetify.showNotification("Failed to copy lyrics.", true);
           }
+        } catch (err) {
+          Spicetify.showNotification("Failed to copy lyrics.", true);
+        } finally {
+          document.body.removeChild(tempTextArea);
         }
       } else {
         Spicetify.showNotification("No lyrics to copy.", true);

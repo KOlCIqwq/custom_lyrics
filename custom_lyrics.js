@@ -37,6 +37,7 @@
     z-index: 1000; /* High z-index to cover everything */
     overflow-y: auto; /* Make the container itself scrollable */
     user-select: text; /* Allow text selection */
+    tabindex="0"; /* Make the container focusable */
   `;
     const lyricsHTML = `
     <!-- Header with proper styling -->
@@ -123,6 +124,7 @@
     lyricsContainer.innerHTML = lyricsHTML;
     mainView.appendChild(lyricsContainer);
     lyricsPageActive = true;
+    lyricsContainer.focus();
     lyricsContainer.addEventListener("copy", (e) => {
       e.stopPropagation();
     });
@@ -135,22 +137,17 @@
         const selectedText = (_a2 = window.getSelection()) == null ? void 0 : _a2.toString();
         if (selectedText) {
           try {
-            navigator.clipboard.writeText(selectedText).then(() => {
-              Spicetify.showNotification("Lyrics copied to clipboard!", false);
-            }).catch((err) => {
-              if (document.execCommand("copy")) {
-                Spicetify.showNotification("Lyrics copied to clipboard!", false);
-              } else {
-                Spicetify.showNotification("Failed to copy lyrics.", true);
-              }
-            });
-          } catch (err) {
-            if (document.execCommand("copy")) {
+            const successful = document.execCommand("copy");
+            if (successful) {
               Spicetify.showNotification("Lyrics copied to clipboard!", false);
             } else {
               Spicetify.showNotification("Failed to copy lyrics.", true);
             }
+          } catch (err) {
+            Spicetify.showNotification("Failed to copy lyrics.", true);
           }
+        } else {
+          Spicetify.showNotification("No text selected to copy.", true);
         }
         e.stopPropagation();
         e.preventDefault();
@@ -169,6 +166,7 @@
     const copyButton = document.getElementById("lyrics-copy-button");
     if (copyButton) {
       copyButton.addEventListener("click", async () => {
+        lyricsContainer.focus();
         const selection = window.getSelection();
         let textToCopy = "";
         if (selection && selection.toString().length > 0) {
@@ -180,15 +178,21 @@
           }
         }
         if (textToCopy) {
+          const tempTextArea = document.createElement("textarea");
+          tempTextArea.value = textToCopy;
+          document.body.appendChild(tempTextArea);
+          tempTextArea.select();
           try {
-            await navigator.clipboard.writeText(textToCopy);
-            Spicetify.showNotification("Lyrics copied to clipboard!", false);
-          } catch (err) {
-            if (document.execCommand("copy")) {
+            const successful = document.execCommand("copy");
+            if (successful) {
               Spicetify.showNotification("Lyrics copied to clipboard!", false);
             } else {
               Spicetify.showNotification("Failed to copy lyrics.", true);
             }
+          } catch (err) {
+            Spicetify.showNotification("Failed to copy lyrics.", true);
+          } finally {
+            document.body.removeChild(tempTextArea);
           }
         } else {
           Spicetify.showNotification("No lyrics to copy.", true);
