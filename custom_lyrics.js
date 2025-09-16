@@ -36,6 +36,7 @@
     color: var(--text-base, #ffffff);
     z-index: 1000; /* High z-index to cover everything */
     overflow-y: auto; /* Make the container itself scrollable */
+    user-select: text; /* Allow text selection */
   `;
     const lyricsHTML = `
     <!-- Header with proper styling -->
@@ -78,6 +79,28 @@
         <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Lyrics</h1>
         <p id="track-info-header" style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.7;">Loading...</p>
       </div>
+      <!-- Copy Button -->
+      <button id="lyrics-copy-button" style="
+        background: transparent;
+        border: none;
+        color: var(--text-base, #ffffff);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+        flex-shrink: 0;
+        margin-left: 16px; /* Space from title */
+      ">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+          <path d="M9.5 1a.5.5 0 0 1 .5.5V3H6V1.5a.5.5 0 0 1 .5-.5h3zM6 2h4v-.5H6.5a.5.5 0 0 1-.5.5zm3 3.5V7H6V5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5z"/>
+        </svg>
+      </button>
     </div>
     
     <!-- Main content area -->
@@ -100,6 +123,39 @@
     lyricsContainer.innerHTML = lyricsHTML;
     mainView.appendChild(lyricsContainer);
     lyricsPageActive = true;
+    lyricsContainer.addEventListener("copy", (e) => {
+      e.stopPropagation();
+    });
+    lyricsContainer.addEventListener("contextmenu", (e) => {
+      e.stopPropagation();
+    });
+    lyricsContainer.addEventListener("keydown", (e) => {
+      var _a2;
+      if (e.ctrlKey && e.key === "c") {
+        const selectedText = (_a2 = window.getSelection()) == null ? void 0 : _a2.toString();
+        if (selectedText) {
+          try {
+            navigator.clipboard.writeText(selectedText).then(() => {
+              Spicetify.showNotification("Lyrics copied to clipboard!", false);
+            }).catch((err) => {
+              if (document.execCommand("copy")) {
+                Spicetify.showNotification("Lyrics copied to clipboard!", false);
+              } else {
+                Spicetify.showNotification("Failed to copy lyrics.", true);
+              }
+            });
+          } catch (err) {
+            if (document.execCommand("copy")) {
+              Spicetify.showNotification("Lyrics copied to clipboard!", false);
+            } else {
+              Spicetify.showNotification("Failed to copy lyrics.", true);
+            }
+          }
+        }
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    });
     const backButton = document.getElementById("lyrics-back-button");
     if (backButton) {
       backButton.addEventListener("click", closeLyricsPage);
@@ -108,6 +164,41 @@
       });
       backButton.addEventListener("mouseleave", () => {
         backButton.style.backgroundColor = "transparent";
+      });
+    }
+    const copyButton = document.getElementById("lyrics-copy-button");
+    if (copyButton) {
+      copyButton.addEventListener("click", async () => {
+        const selection = window.getSelection();
+        let textToCopy = "";
+        if (selection && selection.toString().length > 0) {
+          textToCopy = selection.toString();
+        } else {
+          const lyricsContentEl = document.getElementById("lyrics-content");
+          if (lyricsContentEl) {
+            textToCopy = lyricsContentEl.innerText;
+          }
+        }
+        if (textToCopy) {
+          try {
+            await navigator.clipboard.writeText(textToCopy);
+            Spicetify.showNotification("Lyrics copied to clipboard!", false);
+          } catch (err) {
+            if (document.execCommand("copy")) {
+              Spicetify.showNotification("Lyrics copied to clipboard!", false);
+            } else {
+              Spicetify.showNotification("Failed to copy lyrics.", true);
+            }
+          }
+        } else {
+          Spicetify.showNotification("No lyrics to copy.", true);
+        }
+      });
+      copyButton.addEventListener("mouseenter", () => {
+        copyButton.style.backgroundColor = "rgba(255,255,255,0.1)";
+      });
+      copyButton.addEventListener("mouseleave", () => {
+        copyButton.style.backgroundColor = "transparent";
       });
     }
     fetchAndDisplayLyrics();

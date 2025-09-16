@@ -46,6 +46,7 @@ function showLyricsPage() {
     color: var(--text-base, #ffffff);
     z-index: 1000; /* High z-index to cover everything */
     overflow-y: auto; /* Make the container itself scrollable */
+    user-select: text; /* Allow text selection */
   `;
   
   // Create the lyrics page content
@@ -90,6 +91,28 @@ function showLyricsPage() {
         <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Lyrics</h1>
         <p id="track-info-header" style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.7;">Loading...</p>
       </div>
+      <!-- Copy Button -->
+      <button id="lyrics-copy-button" style="
+        background: transparent;
+        border: none;
+        color: var(--text-base, #ffffff);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+        flex-shrink: 0;
+        margin-left: 16px; /* Space from title */
+      ">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+          <path d="M9.5 1a.5.5 0 0 1 .5.5V3H6V1.5a.5.5 0 0 1 .5-.5h3zM6 2h4v-.5H6.5a.5.5 0 0 1-.5.5zm3 3.5V7H6V5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5z"/>
+        </svg>
+      </button>
     </div>
     
     <!-- Main content area -->
@@ -113,6 +136,46 @@ function showLyricsPage() {
   lyricsContainer.innerHTML = lyricsHTML;
   mainView.appendChild(lyricsContainer);
   lyricsPageActive = true;
+
+  // Allow copying text and context menu
+  // Not working? Seems like the hot keys are being blocked
+  lyricsContainer.addEventListener('copy', (e) => {
+    e.stopPropagation(); // Prevent event from bubbling up and being cancelled
+  });
+  lyricsContainer.addEventListener('contextmenu', (e) => {
+    e.stopPropagation(); // Prevent event from bubbling up and being cancelled
+  });
+
+  // Handle Ctrl+C for copying selected text
+  lyricsContainer.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'c') {
+      const selectedText = window.getSelection()?.toString();
+      if (selectedText) {
+        try {
+          // Attempt to copy using the modern Clipboard API
+          navigator.clipboard.writeText(selectedText).then(() => {
+            Spicetify.showNotification("Lyrics copied to clipboard!", false);
+          }).catch(err => {
+            // Fallback to document.execCommand if Clipboard API fails or is not available
+            if (document.execCommand('copy')) {
+              Spicetify.showNotification("Lyrics copied to clipboard!", false);
+            } else {
+              Spicetify.showNotification("Failed to copy lyrics.", true);
+            }
+          });
+        } catch (err) {
+          // Fallback for older browsers or restricted environments
+          if (document.execCommand('copy')) {
+            Spicetify.showNotification("Lyrics copied to clipboard!", false);
+          } else {
+            Spicetify.showNotification("Failed to copy lyrics.", true);
+          }
+        }
+      }
+      e.stopPropagation(); // Prevent event from bubbling up and being cancelled
+      e.preventDefault(); // Prevent default Ctrl+C behavior
+    }
+  });
   
   // Add back button functionality with proper cleanup
   const backButton = document.getElementById('lyrics-back-button');
@@ -125,6 +188,50 @@ function showLyricsPage() {
     });
     backButton.addEventListener('mouseleave', () => {
       backButton.style.backgroundColor = 'transparent';
+    });
+  }
+
+  // Add copy button functionality
+  const copyButton = document.getElementById('lyrics-copy-button');
+  if (copyButton) {
+    copyButton.addEventListener('click', async () => {
+      const selection = window.getSelection();
+      let textToCopy = '';
+
+      if (selection && selection.toString().length > 0) {
+        // If text is selected, copy the selected text
+        textToCopy = selection.toString();
+      } else {
+        // If no text is selected, copy all visible lyrics
+        const lyricsContentEl = document.getElementById('lyrics-content');
+        if (lyricsContentEl) {
+          textToCopy = lyricsContentEl.innerText;
+        }
+      }
+
+      if (textToCopy) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          Spicetify.showNotification("Lyrics copied to clipboard!", false);
+        } catch (err) {
+          // Fallback to document.execCommand if Clipboard API fails or is not available
+          if (document.execCommand('copy')) {
+            Spicetify.showNotification("Lyrics copied to clipboard!", false);
+          } else {
+            Spicetify.showNotification("Failed to copy lyrics.", true);
+          }
+        }
+      } else {
+        Spicetify.showNotification("No lyrics to copy.", true);
+      }
+    });
+
+    // Add hover effect for copy button
+    copyButton.addEventListener('mouseenter', () => {
+      copyButton.style.backgroundColor = 'rgba(255,255,255,0.1)';
+    });
+    copyButton.addEventListener('mouseleave', () => {
+      copyButton.style.backgroundColor = 'transparent';
     });
   }
   
