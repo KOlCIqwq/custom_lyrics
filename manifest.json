@@ -3,7 +3,7 @@
     "name": "Custom Lyrics",
     "description": "Spicetify extension to show Lyrics",
     "preview": "marketplace.png",
-    "main": "custom_lyrics.js",
+    "main": "./built/custom_lyrics.js",
     "readme": "README.md",
     "branch": "main",
     "authors": [

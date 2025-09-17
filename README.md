@@ -8,7 +8,7 @@ Spotify sometimes fails to fetch them, even when Musixmatch has them, so I built
 ## Use it
 Use it with [Spicetify](https://github.com/spicetify/spicetify-cli)
 
-Copy `custom_lyrics.js` into your Spicetify extensions directory:
+Copy [custom_lyrics.js](https://github.com/KOlCIqwq/custom_lyrics/blob/main/built/custom_lyrics.js) from the built folder into your Spicetify extensions directory:
 | **Platform** | **Path**                                                                               |
 |------------|------------------------------------------------------------------------------------------|
 | **Linux**      | `~/.config/spicetify/Extensions` or `$XDG_CONFIG_HOME/.config/spicetify/Extensions/` |
