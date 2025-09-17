@@ -1,6 +1,10 @@
 // Store references to avoid UI corruption
 let originalPageState: { children: Element[]; parent: Element } | null = null;
 let lyricsPageActive = false;
+let isDragging = false;
+let startX: number;
+let startY: number;
+let memorizedSelectedText: string | null = null;
 
 // Create lyrics page with proper cleanup
 function showLyricsPage() {
@@ -94,11 +98,12 @@ function showLyricsPage() {
       </div>
       <!-- Copy Button -->
       <button id="lyrics-copy-button" style="
-        background: transparent;
+        background:transparent;
         border: none;
         color: var(--text-base, #ffffff);
         cursor: pointer;
-        padding: 8px;
+        padding: 6px;
+        margin-top: 35px;
         border-radius: 50%;
         width: 32px;
         height: 32px;
@@ -138,6 +143,41 @@ function showLyricsPage() {
   mainView.appendChild(lyricsContainer);
   lyricsPageActive = true;
   lyricsContainer.focus(); // Focus the container to enable keyboard events
+
+  lyricsContainer.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
+    //Spicetify.showNotification(`mousedown: isDragging=${isDragging}`, false);
+  });
+
+  lyricsContainer.addEventListener('mousemove', (e) => {
+    if (e.buttons === 1) { // Left mouse button is pressed
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      // If mouse moves more than a few pixels, consider it a drag
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        if (!isDragging) { // Only notify once when dragging starts
+          isDragging = true;
+          //Spicetify.showNotification(`mousemove: isDragging=${isDragging}`, false);
+        }
+      }
+    }
+  });
+
+  lyricsContainer.addEventListener('mouseup', () => {
+    //Spicetify.showNotification(`mouseup: isDragging=${isDragging}`, false);
+    if (isDragging) {
+      const selection = window.getSelection();
+      if (selection && selection.toString().length > 0) {
+        memorizedSelectedText = selection.toString();
+        //Spicetify.showNotification(`Memorized selected text: "${memorizedSelectedText.substring(0, 20)}..."`, false);
+      } else {
+        memorizedSelectedText = null;
+      }
+    }
+    isDragging = false;
+  });
 
   // Allow copying text and context menu
   // Not working? Seems like the hot keys are being blocked
@@ -196,14 +236,19 @@ function showLyricsPage() {
       const selection = window.getSelection();
       let textToCopy = '';
 
-      if (selection && selection.toString().length > 0) {
+      if (memorizedSelectedText) {
+        textToCopy = memorizedSelectedText;
+        //Spicetify.showNotification(`Copying memorized text: "${textToCopy.substring(0, 20)}..."`, false);
+      } else if (selection && selection.toString().length > 0) {
         // If text is selected, copy the selected text
         textToCopy = selection.toString();
+       // Spicetify.showNotification(`Copying current selection: "${textToCopy.substring(0, 20)}..."`, false);
       } else {
         // If no text is selected, copy all visible lyrics
         const lyricsContentEl = document.getElementById('lyrics-content');
         if (lyricsContentEl) {
           textToCopy = lyricsContentEl.innerText;
+          //Spicetify.showNotification(`Copying all lyrics.`, false);
         }
       }
 
@@ -250,12 +295,13 @@ function closeLyricsPage() {
     return;
   }
 
-  // Clear the highlighting interval
+  // Clear the highlighting interval and memorized text
   if (highlightInterval) {
     clearInterval(highlightInterval);
     highlightInterval = null;
   }
   currentHighlightedLine = null;
+  memorizedSelectedText = null; // Clear memorized text on page close
 
   // Remove lyrics container
   const lyricsContainer = document.getElementById('custom-lyrics-page');
@@ -412,8 +458,40 @@ function displaySyncedLyrics(data: any) {
 
   if (contentEl) {
     contentEl.innerHTML = currentLyrics
-      .map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line">${lyric.line}</p>`)
+      .map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">${lyric.line}</p>`)
       .join('');
+
+    // Add click listener for jumping to interval
+    contentEl.addEventListener('click', (e) => {
+      const selection = window.getSelection();
+      const selectedTextLength = selection ? selection.toString().length : 0;
+      //Spicetify.showNotification(`click: isDragging=${isDragging}, selectedTextLength=${selectedTextLength}`, false);
+
+      // Only jump if not dragging AND no text is selected
+      if (!isDragging && selectedTextLength === 0) {
+        const target = e.target as HTMLElement;
+        if (target && target.classList.contains('lyric-line')) {
+          const time = parseFloat(target.dataset.time || '0');
+          if (time > 0) {
+            Spicetify.Player.seek(time * 1000);
+            // Immediately highlight the clicked line
+            if (currentHighlightedLine) {
+              const prevActiveEl = document.getElementById(currentHighlightedLine);
+              if (prevActiveEl) {
+                prevActiveEl.classList.remove('active');
+              }
+            }
+            target.classList.add('active');
+            currentHighlightedLine = target.id;
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      } else if (isDragging) {
+        //Spicetify.showNotification("Click ignored due to dragging.", false);
+      } else if (selectedTextLength > 0) {
+        //Spicetify.showNotification("Click ignored because text is selected.", false);
+      }
+    });
   }
 
   // Add CSS for highlighting
@@ -661,6 +739,8 @@ async function main() {
       if (lyricsPageActive) {
         fetchAndDisplayLyrics();
       }
+      // Reset the copy text if song changes
+      memorizedSelectedText = null;
     });
   }
 }
