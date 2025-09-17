@@ -2,13 +2,15 @@
   {
     "name": "Custom Lyrics",
     "description": "Spicetify extension to show Lyrics",
-    "preview": "custom_lyrics.png",
+    "preview": "marketplace.png",
     "main": "custom_lyrics.js",
     "readme": "README.md",
     "branch": "main",
     "authors": [
         { "name": "KOlCI", "url": "https://github.com/KOlCIqwq" }
     ],
-    "tags": ["lyrics"]
+    "tags": [
+      "lyrics"
+    ]
   }
 ]

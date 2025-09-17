@@ -26,6 +26,7 @@ A button will appear at bottom right
 
 ## Provider
 - [LRCLIB](https://lrclib.net/)
+- Sadly Musixmatch closed their developer registration
 
 ## Made with Spicetify Creator
 - https://github.com/spicetify/spicetify-creator

@@ -6,6 +6,10 @@
   // src/app.tsx
   var originalPageState = null;
   var lyricsPageActive = false;
+  var isDragging = false;
+  var startX;
+  var startY;
+  var memorizedSelectedText = null;
   function showLyricsPage() {
     if (lyricsPageActive) {
       return;
@@ -82,11 +86,12 @@
       </div>
       <!-- Copy Button -->
       <button id="lyrics-copy-button" style="
-        background: transparent;
+        background:transparent;
         border: none;
         color: var(--text-base, #ffffff);
         cursor: pointer;
-        padding: 8px;
+        padding: 6px;
+        margin-top: 35px;
         border-radius: 50%;
         width: 32px;
         height: 32px;
@@ -125,6 +130,33 @@
     mainView.appendChild(lyricsContainer);
     lyricsPageActive = true;
     lyricsContainer.focus();
+    lyricsContainer.addEventListener("mousedown", (e) => {
+      startX = e.clientX;
+      startY = e.clientY;
+      isDragging = false;
+    });
+    lyricsContainer.addEventListener("mousemove", (e) => {
+      if (e.buttons === 1) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+          if (!isDragging) {
+            isDragging = true;
+          }
+        }
+      }
+    });
+    lyricsContainer.addEventListener("mouseup", () => {
+      if (isDragging) {
+        const selection = window.getSelection();
+        if (selection && selection.toString().length > 0) {
+          memorizedSelectedText = selection.toString();
+        } else {
+          memorizedSelectedText = null;
+        }
+      }
+      isDragging = false;
+    });
     lyricsContainer.addEventListener("copy", (e) => {
       e.stopPropagation();
     });
@@ -169,7 +201,9 @@
         lyricsContainer.focus();
         const selection = window.getSelection();
         let textToCopy = "";
-        if (selection && selection.toString().length > 0) {
+        if (memorizedSelectedText) {
+          textToCopy = memorizedSelectedText;
+        } else if (selection && selection.toString().length > 0) {
           textToCopy = selection.toString();
         } else {
           const lyricsContentEl = document.getElementById("lyrics-content");
@@ -216,6 +250,7 @@
       highlightInterval = null;
     }
     currentHighlightedLine = null;
+    memorizedSelectedText = null;
     const lyricsContainer = document.getElementById("custom-lyrics-page");
     if (lyricsContainer) {
       lyricsContainer.remove();
@@ -345,7 +380,31 @@
       data.plainLyrics.split("\n").map((line) => line.trim()).filter(Boolean).forEach((line) => currentLyrics.push({ time: 0, line }));
     }
     if (contentEl) {
-      contentEl.innerHTML = currentLyrics.map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line">${lyric.line}</p>`).join("");
+      contentEl.innerHTML = currentLyrics.map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">${lyric.line}</p>`).join("");
+      contentEl.addEventListener("click", (e) => {
+        const selection = window.getSelection();
+        const selectedTextLength = selection ? selection.toString().length : 0;
+        if (!isDragging && selectedTextLength === 0) {
+          const target = e.target;
+          if (target && target.classList.contains("lyric-line")) {
+            const time = parseFloat(target.dataset.time || "0");
+            if (time > 0) {
+              Spicetify.Player.seek(time * 1e3);
+              if (currentHighlightedLine) {
+                const prevActiveEl = document.getElementById(currentHighlightedLine);
+                if (prevActiveEl) {
+                  prevActiveEl.classList.remove("active");
+                }
+              }
+              target.classList.add("active");
+              currentHighlightedLine = target.id;
+              target.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }
+        } else if (isDragging) {
+        } else if (selectedTextLength > 0) {
+        }
+      });
     }
     const styleEl = document.createElement("style");
     styleEl.id = "custom-lyrics-style";
@@ -546,6 +605,7 @@
         if (lyricsPageActive) {
           fetchAndDisplayLyrics();
         }
+        memorizedSelectedText = null;
       });
     }
   }
