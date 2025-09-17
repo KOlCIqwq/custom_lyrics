@@ -78,38 +78,7 @@ export function showLyricsPage() {
       position: sticky;
       top: 0;
       z-index: 10;
-      background: var(--background-base, #121212);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
     ">
-      <!-- Left side: Back button -->
-      <button id="lyrics-back-button" style="
-        background: transparent;
-        border: none;
-        color: var(--text-base, #ffffff);
-        cursor: pointer;
-        padding: 8px;
-        border-radius: 50%;
-        width: 32px; /* FIX: Corrected width for proper button shape */
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background-color 0.2s;
-        flex-shrink: 0; /* Prevent the button from shrinking */
-      ">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M11.03.47a.75.75 0 0 1 0 1.06L4.56 8l6.47 6.47a.75.75 0 1 1-1.06 1.06L2.44 8 9.97.47a.75.75 0 0 1 1.06 0z"/>
-        </svg>
-      </button>
-
-      <!-- Middle Spacer-->
-      <div style="flex-grow: 1;"></div>
-
-      <!-- Right side: Title and track info stacked vertically -->
-      <div style="text-align: right;">
-        <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Lyrics</h1>
-        <p id="track-info-header" style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.7;">Loading...</p>
-      </div>
       <!-- Copy Button -->
       <button id="lyrics-copy-button" style="
         background:transparent;
