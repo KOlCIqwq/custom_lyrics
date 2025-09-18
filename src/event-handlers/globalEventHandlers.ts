@@ -3,6 +3,7 @@ import { showLyricsPage, closeLyricsPage } from '../components/lyricsPage';
 import { highlightInterval, setHighlightInterval, setCurrentHighlightedLine, setMemorizedSelectedText } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { createLyricsButton } from '../components/lyricsButton';
+import { updateAlbumImage } from '../utils/albumImageFetcher';
 
 declare global {
   interface Window {
@@ -63,6 +64,7 @@ export function setupGlobalEventHandlers() {
         }
         // Reset the copy text if song changes
         setMemorizedSelectedText(null);
+        updateAlbumImage(); // Refresh album image on song change
       });
     }
   }

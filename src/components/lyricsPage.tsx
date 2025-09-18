@@ -18,6 +18,7 @@ import {
   setCurrentLyrics,
 } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
+import { updateAlbumImage, getAlbumImageUrl } from '../utils/albumImageFetcher';
 
 // Create lyrics page with proper cleanup
 export function showLyricsPage() {
@@ -63,30 +64,54 @@ export function showLyricsPage() {
     background: var(--background-base, #121212);
     color: var(--text-base, #ffffff);
     z-index: 1000; /* High z-index to cover everything */
-    overflow-y: auto; /* Make the container itself scrollable */
     user-select: text; /* Allow text selection */
     tabindex="0"; /* Make the container focusable */
+    display: flex; /* Enable flexbox for two-column layout */
+    flex-direction: row; /* Arrange children in a row */
+    position: relative; /* Needed for absolute positioning of background */
+    overflow: hidden; /* Hide overflow from blurred background */
   `;
 
   // Create the lyrics page content
   const lyricsHTML = `
-    <!-- Header with proper styling -->
-     <div style="
-      padding: 16px 32px;
+    <!-- Dynamic Background -->
+    <div id="lyrics-background" style="
+      position: absolute;
+      top: -50px; /* Extend beyond bounds for blur */
+      left: -50px;
+      right: -50px;
+      bottom: -50px;
+      background-size: cover;
+      background-position: center;
+      filter: blur(50px) brightness(0.6); /* Heavy blur and darken */
+      transform: scale(1.1); /* Slightly zoom in for better blur coverage */
+      opacity: 0; /* Start invisible */
+      transition: opacity 1s ease-in-out; /* Fade in effect */
+      z-index: -1; /* Behind other content */
+    "></div>
+
+    <!-- Left Column: Album Image and Track Info -->
+    <div style="
+      width: 30%; /* Adjust width as needed */
+      padding: 32px;
       display: flex;
-      align-items: center; /* Vertically align all items */
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      flex-shrink: 0;
       position: sticky;
       top: 0;
-      z-index: 10;
+      height: 100vh; /* Take full viewport height */
+      overflow-y: auto; /* Scroll if content overflows */
+      z-index: 1; /* Above background */
     ">
-      <!-- Copy Button -->
-      <button id="lyrics-copy-button" style="
+      <!-- Back Button -->
+      <button id="lyrics-back-button" style="
         background:transparent;
         border: none;
         color: var(--text-base, #ffffff);
         cursor: pointer;
         padding: 6px;
-        margin-top: 35px;
         border-radius: 50%;
         width: 32px;
         height: 32px;
@@ -95,7 +120,52 @@ export function showLyricsPage() {
         justify-content: center;
         transition: background-color 0.2s;
         flex-shrink: 0;
-        margin-left: 16px; /* Space from title */
+        margin-bottom: 20px;
+      ">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M14.5 7.5H3.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L3.707 8.5H14.5a.5.5 0 0 0 0-1z"/>
+        </svg>
+      </button>
+
+      <!-- Album Image -->
+      <img id="lyrics-album-image" src="" alt="Album Art" style="
+        width: 200px; /* Larger image size */
+        height: 200px;
+        border-radius: 8px;
+        object-fit: cover;
+        flex-shrink: 0;
+        margin-bottom: 20px;
+      "/>
+
+      <!-- Track Info Header -->
+      <div id="track-info-header" style="
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      "></div>
+      <div id="track-info-artist" style="
+        text-align: center;
+        font-size: 18px;
+        opacity: 0.7;
+      "></div>
+
+      <!-- Copy Button -->
+      <button id="lyrics-copy-button" style="
+        background:transparent;
+        border: none;
+        color: var(--text-base, #ffffff);
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+        flex-shrink: 0;
+        margin-top: 20px;
       ">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
@@ -104,8 +174,15 @@ export function showLyricsPage() {
       </button>
     </div>
 
-    <!-- Main content area -->
-    <div style="padding: 32px; max-width: 800px; margin: 0 auto;">
+    <!-- Right Column: Lyrics Content -->
+    <div style="
+      flex-grow: 1; /* Take remaining width */
+      padding: 32px;
+      max-width: 800px;
+      margin: 0 auto;
+      overflow-y: auto; /* Make this column scrollable */
+      height: 100vh; /* Take full viewport height */
+    ">
       <div id="lyrics-loading" style="text-align: center; padding: 64px 0;">
         <div style="font-size: 48px; margin-bottom: 16px;">🎵</div>
         <p>Loading lyrics...</p>
@@ -126,6 +203,16 @@ export function showLyricsPage() {
   mainView.appendChild(lyricsContainer);
   setLyricsPageActive(true);
   lyricsContainer.focus(); // Focus the container to enable keyboard events
+
+  updateAlbumImage();
+
+  // Set dynamic background
+  const backgroundEl = document.getElementById('lyrics-background') as HTMLElement;
+  const imageUrl = getAlbumImageUrl();
+  if (backgroundEl && imageUrl) {
+    backgroundEl.style.backgroundImage = `url(${imageUrl})`;
+    backgroundEl.style.opacity = '1'; // Fade in the background
+  }
 
   lyricsContainer.addEventListener('mousedown', (e) => {
     setStartX(e.clientX);
@@ -271,6 +358,33 @@ export function showLyricsPage() {
 
   // Fetch and display lyrics
   fetchAndDisplayLyrics();
+
+  // Add a style element for the background animation
+  const styleEl = document.createElement('style');
+  styleEl.id = 'custom-lyrics-background-style';
+  styleEl.innerHTML = `
+    @keyframes backgroundPan {
+      0% {
+        background-position: 0% 0%;
+      }
+      25% {
+        background-position: 10% 20%;
+      }
+      50% {
+        background-position: 0% 0%;
+      }
+      75% {
+        background-position: -10% -20%;
+      }
+      100% {
+        background-position: 0% 0%;
+      }
+    }
+    #lyrics-background {
+      animation: backgroundPan 60s linear infinite;
+    }
+  `;
+  document.head.appendChild(styleEl);
 }
 
 // Properly close the lyrics page
@@ -296,6 +410,11 @@ export function closeLyricsPage() {
   const styleEl = document.getElementById('custom-lyrics-style');
   if (styleEl) {
     styleEl.remove();
+  }
+  // Remove the custom background style element
+  const backgroundStyleEl = document.getElementById('custom-lyrics-background-style');
+  if (backgroundStyleEl) {
+    backgroundStyleEl.remove();
   }
 
   // Restore original content visibility

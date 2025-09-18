@@ -20,6 +20,7 @@ export async function fetchAndDisplayLyrics() {
   const contentEl = document.getElementById('lyrics-content');
   const errorEl = document.getElementById('lyrics-error');
   const headerInfo = document.getElementById('track-info-header');
+  const artistInfo = document.getElementById('track-info-artist'); // New element for artist
   const errorDetails = document.getElementById('error-details');
 
   // Clear previous lyrics and hide content/loading elements
@@ -53,7 +54,10 @@ export async function fetchAndDisplayLyrics() {
   const duration_in_seconds = Math.ceil(duration / 1000);
 
   if (headerInfo) {
-    headerInfo.textContent = `${title} • ${artist}`;
+    headerInfo.textContent = title;
+  }
+  if (artistInfo) { // Update artist info
+    artistInfo.textContent = artist;
   }
 
   try {
