@@ -79,12 +79,10 @@
     const album_name = (_g = (_f = track.album) == null ? void 0 : _f.name) != null ? _g : "";
     const duration = (_i = (_h = track.duration) == null ? void 0 : _h.milliseconds) != null ? _i : 0;
     const duration_in_seconds = Math.ceil(duration / 1e3);
-    if (headerInfo) {
+    if (headerInfo)
       headerInfo.textContent = title;
-    }
-    if (artistInfo) {
+    if (artistInfo)
       artistInfo.textContent = artist;
-    }
     try {
       const baseUrl = "https://lrclib.net/api/get";
       const queryParams = new URLSearchParams({
@@ -119,6 +117,7 @@
     }
   }
   function displaySyncedLyrics(data) {
+    var _a;
     const contentEl = document.getElementById("lyrics-content");
     const loadingEl = document.getElementById("lyrics-loading");
     const errorEl = document.getElementById("lyrics-error");
@@ -155,7 +154,7 @@
       );
     }
     if (currentLyrics.length === 0 && data.plainLyrics) {
-      data.plainLyrics.split("\n").map((line) => line.trim()).filter(Boolean).forEach((line) => currentLyrics.push({ time: 0, line }));
+      data.plainLyrics.split("\n").map((line) => line.trim()).filter(Boolean).forEach((line) => currentLyrics.push({ time: -1, line }));
     }
     if (contentEl) {
       contentEl.innerHTML = currentLyrics.map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">${lyric.line}</p>`).join("");
@@ -166,33 +165,37 @@
           const target = e.target;
           if (target && target.classList.contains("lyric-line")) {
             const time = parseFloat(target.dataset.time || "0");
-            if (time > 0) {
+            if (time >= 0) {
               window.Spicetify.Player.seek(time * 1e3);
               if (currentHighlightedLine) {
                 const prevActiveEl = document.getElementById(currentHighlightedLine);
-                if (prevActiveEl) {
+                if (prevActiveEl)
                   prevActiveEl.classList.remove("active");
-                }
               }
               target.classList.add("active");
               setCurrentHighlightedLine(target.id);
               target.scrollIntoView({ behavior: "smooth", block: "center" });
             }
           }
-        } else if (isDragging) {
-        } else if (selectedTextLength > 0) {
         }
       });
     }
+    (_a = document.getElementById("custom-lyrics-style")) == null ? void 0 : _a.remove();
     const styleEl = document.createElement("style");
     styleEl.id = "custom-lyrics-style";
     styleEl.textContent = `
+    #lyrics-content {
+      /* Add space at the bottom equal to half the screen height */
+      padding-bottom: 50vh;
+      box-sizing: border-box;
+    }
     .lyric-line {
       font-size: 24px;
       margin: 16px 0;
       opacity: 0.6;
       transition: opacity 0.3s, color 0.3s, transform 0.3s;
       text-align: center;
+      cursor: pointer;
     }
     .lyric-line.active {
       opacity: 1;
@@ -217,9 +220,8 @@
         if (newActiveLineId && newActiveLineId !== currentHighlightedLine) {
           if (currentHighlightedLine) {
             const prevActiveEl = document.getElementById(currentHighlightedLine);
-            if (prevActiveEl) {
+            if (prevActiveEl)
               prevActiveEl.classList.remove("active");
-            }
           }
           const newActiveEl = document.getElementById(newActiveLineId);
           if (newActiveEl) {
@@ -229,21 +231,27 @@
           setCurrentHighlightedLine(newActiveLineId);
         } else if (!newActiveLineId && currentHighlightedLine) {
           const prevActiveEl = document.getElementById(currentHighlightedLine);
-          if (prevActiveEl) {
+          if (prevActiveEl)
             prevActiveEl.classList.remove("active");
-          }
           setCurrentHighlightedLine(null);
         }
-      }, 500)
+      }, 250)
     );
   }
 
   // src/utils/albumImageFetcher.ts
-  function updateAlbumImage() {
+  function getAlbumImageUrl() {
     var _a, _b, _c, _d, _e, _f;
+    if (((_f = (_e = (_d = (_c = (_b = (_a = window.Spicetify) == null ? void 0 : _a.Player) == null ? void 0 : _b.data) == null ? void 0 : _c.item) == null ? void 0 : _d.album) == null ? void 0 : _e.images) == null ? void 0 : _f.length) > 0) {
+      return window.Spicetify.Player.data.item.album.images[0].url;
+    }
+    return null;
+  }
+  function updateAlbumImage() {
     const albumImage = document.getElementById("lyrics-album-image");
-    if (albumImage && ((_f = (_e = (_d = (_c = (_b = (_a = window.Spicetify) == null ? void 0 : _a.Player) == null ? void 0 : _b.data) == null ? void 0 : _c.item) == null ? void 0 : _d.album) == null ? void 0 : _e.images) == null ? void 0 : _f.length) > 0) {
-      albumImage.src = window.Spicetify.Player.data.item.album.images[0].url;
+    const imageUrl = getAlbumImageUrl();
+    if (albumImage && imageUrl) {
+      albumImage.src = imageUrl;
     }
   }
 
@@ -252,14 +260,20 @@
     if (lyricsPageActive) {
       return;
     }
-    const mainView = document.querySelector(".main-view-container__scroll-node-child") || document.querySelector(".main-view-container__scroll-node") || document.querySelector(".Root__main-view > div") || document.querySelector(".Root__main-view");
+    const mainView = document.querySelector(".main-view-container__scroll-node-child") || document.querySelector(".Root__main-view > div") || document.querySelector(".Root__main-view");
+    const topBar = document.querySelector(".main-topBar-container");
     if (!mainView) {
       return;
+    }
+    if (topBar) {
+      topBar.style.display = "none";
     }
     const children = Array.from(mainView.children);
     setOriginalPageState({
       children,
-      parent: mainView
+      parent: mainView,
+      topBar,
+      originalTopBarDisplay: topBar ? topBar.style.display : ""
     });
     children.forEach((child) => {
       child.style.display = "none";
@@ -267,52 +281,52 @@
     const lyricsContainer = document.createElement("div");
     lyricsContainer.id = "custom-lyrics-page";
     lyricsContainer.style.cssText = `
-    position: absolute;
+    position: fixed; /*Use fixed positioning for a true overlay */
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
     width: 100%;
     height: 100%;
     background: var(--background-base, #121212);
     color: var(--text-base, #ffffff);
-    z-index: 1000; /* High z-index to cover everything */
-    user-select: text; /* Allow text selection */
-    tabindex="0"; /* Make the container focusable */
-    display: flex; /* Enable flexbox for two-column layout */
-    flex-direction: row; /* Arrange children in a row */
+    z-index: 9999; /*This will now work correctly */
+    user-select: text;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden; /*Still good practice to contain children */
   `;
     const lyricsHTML = `
-    <!-- Left Column: Album Image and Track Info -->
+    <!-- Dynamic Background -->
+    <div id="lyrics-background" style="
+      position: absolute;
+      top: -50px; left: -50px; right: -50px; bottom: -50px;
+      background-size: cover;
+      background-position: center;
+      filter: blur(50px) brightness(0.6);
+      transform: scale(1.1);
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+      z-index: -1;
+    "></div>
+
+    <!-- Left Column: Information (Static, No Scroll) -->
     <div style="
-      width: 30%; /* Adjust width as needed */
+      width: 350px;
       padding: 32px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
       flex-shrink: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh; /* Take full viewport height */
-      overflow-y: auto; /* Scroll if content overflows */
+      z-index: 1;
+      height: 100%; /* Fill parent height */
+      box-sizing: border-box;
     ">
       <!-- Back Button -->
       <button id="lyrics-back-button" style="
-        background:transparent;
-        border: none;
-        color: var(--text-base, #ffffff);
-        cursor: pointer;
-        padding: 6px;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background-color 0.2s;
-        flex-shrink: 0;
-        margin-bottom: 20px;
+        background:transparent; border: none; color: var(--text-base, #ffffff);
+        cursor: pointer; padding: 6px; border-radius: 50%; width: 32px; height: 32px;
+        display: flex; align-items: center; justify-content: center;
+        transition: background-color 0.2s; flex-shrink: 0; margin-bottom: 20px;
       ">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <path d="M14.5 7.5H3.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L3.707 8.5H14.5a.5.5 0 0 0 0-1z"/>
@@ -321,43 +335,20 @@
 
       <!-- Album Image -->
       <img id="lyrics-album-image" src="" alt="Album Art" style="
-        width: 200px; /* Larger image size */
-        height: 200px;
-        border-radius: 8px;
-        object-fit: cover;
-        flex-shrink: 0;
-        margin-bottom: 20px;
+        width: 250px; height: 250px; border-radius: 8px; object-fit: cover;
+        flex-shrink: 0; margin-bottom: 20px;
       "/>
 
       <!-- Track Info Header -->
-      <div id="track-info-header" style="
-        text-align: center;
-        font-size: 24px;
-        font-weight: bold;
-        margin-bottom: 10px;
-      "></div>
-      <div id="track-info-artist" style="
-        text-align: center;
-        font-size: 18px;
-        opacity: 0.7;
-      "></div>
+      <div id="track-info-header" style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px;"></div>
+      <div id="track-info-artist" style="text-align: center; font-size: 18px; opacity: 0.7;"></div>
 
       <!-- Copy Button -->
       <button id="lyrics-copy-button" style="
-        background:transparent;
-        border: none;
-        color: var(--text-base, #ffffff);
-        cursor: pointer;
-        padding: 6px;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background-color 0.2s;
-        flex-shrink: 0;
-        margin-top: 20px;
+        background:transparent; border: none; color: var(--text-base, #ffffff);
+        cursor: pointer; padding: 6px; border-radius: 50%; width: 32px; height: 32px;
+        display: flex; align-items: center; justify-content: center;
+        transition: background-color 0.2s; flex-shrink: 0; margin-top: 20px;
       ">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
@@ -366,23 +357,23 @@
       </button>
     </div>
 
-    <!-- Right Column: Lyrics Content -->
-    <div style="
+    <!-- Right Column: Lyrics (Scrollable) -->
+    <div id="lyrics-scroll-container" style="
       flex-grow: 1; /* Take remaining width */
-      padding: 32px;
+      height: 100%; /* Fill parent height */
+      overflow-y: auto; /* Make ONLY this column scrollable */
+      overflow-x: hidden; /* Prevent horizontal scrolling */
+      padding: 32px 64px;
       max-width: 800px;
       margin: 0 auto;
-      overflow-y: auto; /* Make this column scrollable */
-      height: 100vh; /* Take full viewport height */
+      box-sizing: border-box;
+      z-index: 1;
     ">
       <div id="lyrics-loading" style="text-align: center; padding: 64px 0;">
         <div style="font-size: 48px; margin-bottom: 16px;">\u{1F3B5}</div>
         <p>Loading lyrics...</p>
       </div>
-
-      <div id="lyrics-content" style="display: none;">
-      </div>
-
+      <div id="lyrics-content" style="display: none;"></div>
       <div id="lyrics-error" style="display: none; text-align: center; padding: 64px 0;">
         <div style="font-size: 48px; margin-bottom: 16px;">\u{1F614}</div>
         <p>No lyrics found for this track</p>
@@ -393,14 +384,24 @@
     lyricsContainer.innerHTML = lyricsHTML;
     mainView.appendChild(lyricsContainer);
     setLyricsPageActive(true);
+    lyricsContainer.setAttribute("tabindex", "0");
     lyricsContainer.focus();
     updateAlbumImage();
-    lyricsContainer.addEventListener("mousedown", (e) => {
+    updateLyricsBackground();
+    const lyricsScrollContainer = document.getElementById("lyrics-scroll-container");
+    if (!lyricsScrollContainer)
+      return;
+    lyricsScrollContainer.addEventListener("mousedown", (e) => {
       setStartX(e.clientX);
       setStartY(e.clientY);
       setIsDragging(false);
     });
-    lyricsContainer.addEventListener("mousemove", (e) => {
+    lyricsScrollContainer.addEventListener("mousedown", (e) => {
+      setStartX(e.clientX);
+      setStartY(e.clientY);
+      setIsDragging(false);
+    });
+    lyricsScrollContainer.addEventListener("mousemove", (e) => {
       if (e.buttons === 1) {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -411,7 +412,7 @@
         }
       }
     });
-    lyricsContainer.addEventListener("mouseup", () => {
+    lyricsScrollContainer.addEventListener("mouseup", () => {
       if (isDragging) {
         const selection = window.getSelection();
         if (selection && selection.toString().length > 0) {
@@ -422,20 +423,15 @@
       }
       setIsDragging(false);
     });
-    lyricsContainer.addEventListener("copy", (e) => {
-      e.stopPropagation();
-    });
-    lyricsContainer.addEventListener("contextmenu", (e) => {
-      e.stopPropagation();
-    });
+    lyricsContainer.addEventListener("copy", (e) => e.stopPropagation());
+    lyricsContainer.addEventListener("contextmenu", (e) => e.stopPropagation());
     lyricsContainer.addEventListener("keydown", (e) => {
       var _a;
       if (e.ctrlKey && e.key === "c") {
         const selectedText = (_a = window.getSelection()) == null ? void 0 : _a.toString();
         if (selectedText) {
           try {
-            const successful = document.execCommand("copy");
-            if (successful) {
+            if (document.execCommand("copy")) {
               Spicetify.showNotification("Lyrics copied to clipboard!", false);
             } else {
               Spicetify.showNotification("Failed to copy lyrics.", true);
@@ -453,12 +449,8 @@
     const backButton = document.getElementById("lyrics-back-button");
     if (backButton) {
       backButton.addEventListener("click", closeLyricsPage);
-      backButton.addEventListener("mouseenter", () => {
-        backButton.style.backgroundColor = "rgba(255,255,255,0.1)";
-      });
-      backButton.addEventListener("mouseleave", () => {
-        backButton.style.backgroundColor = "transparent";
-      });
+      backButton.addEventListener("mouseenter", () => backButton.style.backgroundColor = "rgba(255,255,255,0.1)");
+      backButton.addEventListener("mouseleave", () => backButton.style.backgroundColor = "transparent");
     }
     const copyButton = document.getElementById("lyrics-copy-button");
     if (copyButton) {
@@ -477,36 +469,45 @@
           }
         }
         if (textToCopy) {
-          const tempTextArea = document.createElement("textarea");
-          tempTextArea.value = textToCopy;
-          document.body.appendChild(tempTextArea);
-          tempTextArea.select();
           try {
-            const successful = document.execCommand("copy");
-            if (successful) {
-              Spicetify.showNotification("Lyrics copied to clipboard!", false);
-            } else {
-              Spicetify.showNotification("Failed to copy lyrics.", true);
-            }
+            await navigator.clipboard.writeText(textToCopy);
+            Spicetify.showNotification("Lyrics copied to clipboard!", false);
           } catch (err) {
             Spicetify.showNotification("Failed to copy lyrics.", true);
-          } finally {
-            document.body.removeChild(tempTextArea);
           }
         } else {
           Spicetify.showNotification("No lyrics to copy.", true);
         }
       });
-      copyButton.addEventListener("mouseenter", () => {
-        copyButton.style.backgroundColor = "rgba(255,255,255,0.1)";
-      });
-      copyButton.addEventListener("mouseleave", () => {
-        copyButton.style.backgroundColor = "transparent";
-      });
+      copyButton.addEventListener("mouseenter", () => copyButton.style.backgroundColor = "rgba(255,255,255,0.1)");
+      copyButton.addEventListener("mouseleave", () => copyButton.style.backgroundColor = "transparent");
     }
     fetchAndDisplayLyrics();
+    const styleEl = document.createElement("style");
+    styleEl.id = "custom-lyrics-background-style";
+    styleEl.innerHTML = `
+    @keyframes backgroundPan {
+      0%, 100% { background-position: 0% 0%; }
+      25% { background-position: 10% 20%; }
+      50% { background-position: 0% 0%; }
+      75% { background-position: -10% -20%; }
+    }
+    #lyrics-background {
+      animation: backgroundPan 60s linear infinite;
+    }
+  `;
+    document.head.appendChild(styleEl);
+  }
+  function updateLyricsBackground() {
+    const backgroundEl = document.getElementById("lyrics-background");
+    const imageUrl = getAlbumImageUrl();
+    if (backgroundEl && imageUrl) {
+      backgroundEl.style.backgroundImage = `url(${imageUrl})`;
+      backgroundEl.style.opacity = "1";
+    }
   }
   function closeLyricsPage() {
+    var _a, _b, _c;
     if (!lyricsPageActive || !originalPageState) {
       return;
     }
@@ -516,21 +517,25 @@
     }
     setCurrentHighlightedLine(null);
     setMemorizedSelectedText(null);
-    const lyricsContainer = document.getElementById("custom-lyrics-page");
-    if (lyricsContainer) {
-      lyricsContainer.remove();
-    }
-    const styleEl = document.getElementById("custom-lyrics-style");
-    if (styleEl) {
-      styleEl.remove();
-    }
-    if (originalPageState && originalPageState.children) {
+    (_a = document.getElementById("custom-lyrics-page")) == null ? void 0 : _a.remove();
+    (_b = document.getElementById("custom-lyrics-style")) == null ? void 0 : _b.remove();
+    (_c = document.getElementById("custom-lyrics-background-style")) == null ? void 0 : _c.remove();
+    if (originalPageState.children) {
       originalPageState.children.forEach((child) => {
         child.style.display = "";
       });
     }
+    if (originalPageState.topBar) {
+      originalPageState.topBar.style.display = originalPageState.originalTopBarDisplay || "";
+    }
     setLyricsPageActive(false);
     setOriginalPageState(null);
+  }
+  function resetLyricsViewScroll() {
+    const lyricsScrollContainer = document.getElementById("lyrics-scroll-container");
+    if (lyricsScrollContainer) {
+      lyricsScrollContainer.scrollTop = 0;
+    }
   }
 
   // src/components/lyricsButton.tsx
@@ -687,6 +692,8 @@
           }
           setMemorizedSelectedText(null);
           updateAlbumImage();
+          updateLyricsBackground();
+          resetLyricsViewScroll();
         });
       }
     }

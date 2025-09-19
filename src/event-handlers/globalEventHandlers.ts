@@ -1,5 +1,5 @@
 import { lyricsPageActive } from '../state/lyricsState';
-import { showLyricsPage, closeLyricsPage } from '../components/lyricsPage';
+import { showLyricsPage, closeLyricsPage, updateLyricsBackground, resetLyricsViewScroll } from '../components/lyricsPage';
 import { highlightInterval, setHighlightInterval, setCurrentHighlightedLine, setMemorizedSelectedText } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { createLyricsButton } from '../components/lyricsButton';
@@ -64,7 +64,9 @@ export function setupGlobalEventHandlers() {
         }
         // Reset the copy text if song changes
         setMemorizedSelectedText(null);
-        updateAlbumImage(); // Refresh album image on song change
+        updateAlbumImage();
+        updateLyricsBackground(); // Update background on song change
+        resetLyricsViewScroll(); // Reset the page to top
       });
     }
   }

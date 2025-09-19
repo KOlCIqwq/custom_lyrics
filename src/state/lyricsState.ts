@@ -1,5 +1,12 @@
 // Store references to avoid UI corruption
-export let originalPageState: { children: Element[]; parent: Element } | null = null;
+export type OriginalPageState = {
+  children: Element[];
+  parent: Element;
+  topBar: Element | null;
+  originalTopBarDisplay: string;
+} | null;
+
+export let originalPageState: OriginalPageState = null;
 export let lyricsPageActive = false;
 export let isDragging = false;
 export let startX: number;
@@ -9,7 +16,7 @@ export let currentLyrics: { time: number; line: string }[] = [];
 export let highlightInterval: number | null = null;
 export let currentHighlightedLine: string | null = null;
 
-export function setOriginalPageState(state: { children: Element[]; parent: Element } | null) {
+export function setOriginalPageState(state: OriginalPageState) {
   originalPageState = state;
 }
 

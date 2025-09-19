@@ -20,21 +20,19 @@ export async function fetchAndDisplayLyrics() {
   const contentEl = document.getElementById('lyrics-content');
   const errorEl = document.getElementById('lyrics-error');
   const headerInfo = document.getElementById('track-info-header');
-  const artistInfo = document.getElementById('track-info-artist'); // New element for artist
+  const artistInfo = document.getElementById('track-info-artist');
   const errorDetails = document.getElementById('error-details');
 
-  // Clear previous lyrics and hide content/loading elements
   if (contentEl) contentEl.innerHTML = '';
   if (loadingEl) loadingEl.style.display = 'none';
   if (errorEl) errorEl.style.display = 'none';
 
-  // Clear any existing highlight interval
   if (highlightInterval) {
     clearInterval(highlightInterval);
     setHighlightInterval(null);
   }
   setCurrentHighlightedLine(null);
-  setCurrentLyrics([]); // Clear lyrics data
+  setCurrentLyrics([]);
 
   if (!window.Spicetify?.Player?.data?.item) {
     if (errorEl) errorEl.style.display = 'block';
@@ -53,15 +51,10 @@ export async function fetchAndDisplayLyrics() {
   const duration = track.duration?.milliseconds ?? 0;
   const duration_in_seconds = Math.ceil(duration / 1000);
 
-  if (headerInfo) {
-    headerInfo.textContent = title;
-  }
-  if (artistInfo) { // Update artist info
-    artistInfo.textContent = artist;
-  }
+  if (headerInfo) headerInfo.textContent = title;
+  if (artistInfo) artistInfo.textContent = artist;
 
   try {
-    //Spicetify.showNotification(`[LYRICS] Fetching lyrics for: ${title} by ${artist}`);
     const baseUrl = 'https://lrclib.net/api/get';
     const queryParams = new URLSearchParams({
       artist_name: artist,
@@ -72,9 +65,6 @@ export async function fetchAndDisplayLyrics() {
 
     const url = `${baseUrl}?${queryParams.toString()}`;
     const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
-
-    //Spicetify.showNotification(processed, true);
-
     const response = await fetch(processed);
 
     if (!response.ok) {
@@ -85,17 +75,16 @@ export async function fetchAndDisplayLyrics() {
     displaySyncedLyrics(data);
   } catch (error) {
     if (loadingEl) loadingEl.style.display = 'none';
-    if (contentEl) contentEl.style.display = 'none'; // Hide lyrics content on error
+    if (contentEl) contentEl.style.display = 'none';
     if (errorEl) errorEl.style.display = 'block';
     if (errorDetails) errorDetails.textContent = `${title} by ${artist}`;
 
-    // Clear any existing highlight interval on error
     if (highlightInterval) {
       clearInterval(highlightInterval);
       setHighlightInterval(null);
     }
     setCurrentHighlightedLine(null);
-    setCurrentLyrics([]); // Clear lyrics data on error
+    setCurrentLyrics([]);
   }
 }
 
@@ -128,7 +117,7 @@ export function displaySyncedLyrics(data: any) {
             const minutes = parseInt(match[1], 10);
             const seconds = parseInt(match[2], 10);
             const milliseconds = parseInt(match[3], 10);
-            const time = minutes * 60 + seconds + milliseconds / (match[3].length === 3 ? 1000 : 100); // Handle both .xx and .xxx
+            const time = minutes * 60 + seconds + milliseconds / (match[3].length === 3 ? 1000 : 100);
             const text = match[4].trim();
             if (text) return { time, line: text };
           }
@@ -138,13 +127,12 @@ export function displaySyncedLyrics(data: any) {
     );
   }
 
-  // Fallback to plainLyrics if synced not available
   if (currentLyrics.length === 0 && data.plainLyrics) {
     data.plainLyrics
       .split('\n')
       .map((line: string) => line.trim())
       .filter(Boolean)
-      .forEach((line: string) => currentLyrics.push({ time: 0, line })); // Assign 0 time for plain lyrics
+      .forEach((line: string) => currentLyrics.push({ time: -1, line }));
   }
 
   if (contentEl) {
@@ -152,49 +140,48 @@ export function displaySyncedLyrics(data: any) {
       .map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">${lyric.line}</p>`)
       .join('');
 
-    // Add click listener for jumping to interval
     contentEl.addEventListener('click', (e) => {
       const selection = window.getSelection();
       const selectedTextLength = selection ? selection.toString().length : 0;
-      //Spicetify.showNotification(`click: isDragging=${isDragging}, selectedTextLength=${selectedTextLength}`, false);
 
-      // Only jump if not dragging AND no text is selected
       if (!isDragging && selectedTextLength === 0) {
         const target = e.target as HTMLElement;
         if (target && target.classList.contains('lyric-line')) {
           const time = parseFloat(target.dataset.time || '0');
-          if (time > 0) {
+          if (time >= 0) { // Allow seeking to time 0
             window.Spicetify.Player.seek(time * 1000);
-            // Immediately highlight the clicked line
             if (currentHighlightedLine) {
               const prevActiveEl = document.getElementById(currentHighlightedLine);
-              if (prevActiveEl) {
-                prevActiveEl.classList.remove('active');
-              }
+              if (prevActiveEl) prevActiveEl.classList.remove('active');
             }
             target.classList.add('active');
             setCurrentHighlightedLine(target.id);
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }
-      } else if (isDragging) {
-        //Spicetify.showNotification("Click ignored due to dragging.", false);
-      } else if (selectedTextLength > 0) {
-        //Spicetify.showNotification("Click ignored because text is selected.", false);
       }
     });
   }
 
-  // Add CSS for highlighting
+  // Remove old style element if it exists
+  document.getElementById('custom-lyrics-style')?.remove();
+  
+  // Add CSS for highlighting and the scrolling fix
   const styleEl = document.createElement('style');
   styleEl.id = 'custom-lyrics-style';
   styleEl.textContent = `
+    #lyrics-content {
+      /* Add space at the bottom equal to half the screen height */
+      padding-bottom: 50vh;
+      box-sizing: border-box;
+    }
     .lyric-line {
       font-size: 24px;
       margin: 16px 0;
       opacity: 0.6;
       transition: opacity 0.3s, color 0.3s, transform 0.3s;
       text-align: center;
+      cursor: pointer;
     }
     .lyric-line.active {
       opacity: 1;
@@ -224,25 +211,19 @@ export function displaySyncedLyrics(data: any) {
       if (newActiveLineId && newActiveLineId !== currentHighlightedLine) {
         if (currentHighlightedLine) {
           const prevActiveEl = document.getElementById(currentHighlightedLine);
-          if (prevActiveEl) {
-            prevActiveEl.classList.remove('active');
-          }
+          if (prevActiveEl) prevActiveEl.classList.remove('active');
         }
         const newActiveEl = document.getElementById(newActiveLineId);
         if (newActiveEl) {
           newActiveEl.classList.add('active');
-          // scroll into view
           newActiveEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         setCurrentHighlightedLine(newActiveLineId);
       } else if (!newActiveLineId && currentHighlightedLine) {
-        // No active line, remove highlight from previous
         const prevActiveEl = document.getElementById(currentHighlightedLine);
-        if (prevActiveEl) {
-          prevActiveEl.classList.remove('active');
-        }
+        if (prevActiveEl) prevActiveEl.classList.remove('active');
         setCurrentHighlightedLine(null);
       }
-    }, 500),
+    }, 250), // Interval can be a bit faster for better accuracy
   );
 }
