@@ -176,19 +176,22 @@ export function displaySyncedLyrics(data: any) {
       box-sizing: border-box;
     }
     .lyric-line {
-      font-size: 24px;
-      margin: 16px 0;
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.3s, transform 0.3s;
-      text-align: center;
-      cursor: pointer;
-    }
-    .lyric-line.active {
-      opacity: 1;
-      color: var(--text-base, #ffffff);
-      font-weight: 700;
-      transform: scale(1.05);
-    }
+    font-size: 24px;
+    margin: 16px 0;
+    opacity: 0.6;
+    transition: opacity 0.3s, color 0.3s, transform 0.3s;
+    text-align: center;
+    cursor: pointer;
+    color: #ffffffc4;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+  }
+  .lyric-line.active {
+    color: #ffffffff;
+    opacity: 1;
+    font-weight: 1000;
+    transform: scale(1.05);
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+  }
   `;
   document.head.appendChild(styleEl);
 
@@ -224,6 +227,6 @@ export function displaySyncedLyrics(data: any) {
         if (prevActiveEl) prevActiveEl.classList.remove('active');
         setCurrentHighlightedLine(null);
       }
-    }, 250), // Interval can be a bit faster for better accuracy
+    }, 150), // Interval can be a bit faster for better accuracy
   );
 }
