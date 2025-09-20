@@ -1,5 +1,5 @@
 import { lyricsPageActive } from '../state/lyricsState';
-import { showLyricsPage, closeLyricsPage, updateLyricsBackground, resetLyricsViewScroll } from '../components/lyricsPage';
+import { showLyricsPage, closeLyricsPage, updateLyricsBackground, resetLyricsViewScroll, handleAlbumRotation } from '../components/lyricsPage';
 import { highlightInterval, setHighlightInterval, setCurrentHighlightedLine, setMemorizedSelectedText } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { createLyricsButton } from '../components/lyricsButton';
@@ -67,6 +67,10 @@ export function setupGlobalEventHandlers() {
         updateAlbumImage();
         updateLyricsBackground(); // Update background on song change
         resetLyricsViewScroll(); // Reset the page to top
+      });
+
+      window.Spicetify.Player.addEventListener('onplaypause', () => {
+        handleAlbumRotation();
       });
     }
   }

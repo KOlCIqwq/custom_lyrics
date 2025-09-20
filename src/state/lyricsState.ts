@@ -15,9 +15,19 @@ export let memorizedSelectedText: string | null = null;
 export let currentLyrics: { time: number; line: string }[] = [];
 export let highlightInterval: number | null = null;
 export let currentHighlightedLine: string | null = null;
+export let isAlbumRotating = false;
+export let rotationDeg: number;
 
 export function setOriginalPageState(state: OriginalPageState) {
   originalPageState = state;
+}
+
+export function setAlbumRotating(active: boolean){
+  isAlbumRotating = active;
+}
+
+export function setRotationDegree(degree:number){
+  rotationDeg = degree;
 }
 
 export function setLyricsPageActive(active: boolean) {

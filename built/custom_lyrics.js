@@ -13,8 +13,16 @@
   var currentLyrics = [];
   var highlightInterval = null;
   var currentHighlightedLine = null;
+  var isAlbumRotating = false;
+  var rotationDeg;
   function setOriginalPageState(state) {
     originalPageState = state;
+  }
+  function setAlbumRotating(active) {
+    isAlbumRotating = active;
+  }
+  function setRotationDegree(degree) {
+    rotationDeg = degree;
   }
   function setLyricsPageActive(active) {
     lyricsPageActive = active;
@@ -308,7 +316,7 @@
       z-index: -1;
     "></div>
 
-    <!-- Left Column: Information (Static, No Scroll) -->
+    <!-- Left Column: Information -->
     <div style="
       width: 350px;
       padding: 32px;
@@ -335,7 +343,7 @@
 
       <!-- Album Image -->
       <img id="lyrics-album-image" src="" alt="Album Art" style="
-        width: 250px; height: 250px; border-radius: 8px; object-fit: cover;
+        width: 250px; height: 250px; border-radius: 50%; object-fit: cover;
         flex-shrink: 0; margin-bottom: 20px;
       "/>
 
@@ -357,7 +365,7 @@
       </button>
     </div>
 
-    <!-- Right Column: Lyrics (Scrollable) -->
+    <!-- Right Column: Lyrics -->
     <div id="lyrics-scroll-container" style="
       flex-grow: 1; /* Take remaining width */
       height: 100%; /* Fill parent height */
@@ -497,6 +505,80 @@
     }
   `;
     document.head.appendChild(styleEl);
+    updateRotationKeyframes(rotationDeg);
+    const albumImg = document.getElementById("lyrics-album-image");
+    if (!albumImg)
+      return;
+    albumImg.classList.add("rotating");
+    setAlbumRotating(true);
+    if (Spicetify.Player.isPlaying() != true) {
+      albumImg.classList.remove("rotating");
+      setAlbumRotating(false);
+    }
+  }
+  function handleAlbumRotation() {
+    const albumImg = document.getElementById("lyrics-album-image");
+    if (!albumImg)
+      return;
+    const angle = "angle " + getCurrentRotation();
+    Spicetify.showNotification(angle);
+    if (isAlbumRotating) {
+      const saveAngle = pauseRotation(albumImg);
+      setRotationDegree(saveAngle);
+    } else {
+      resumeRotation(albumImg, rotationDeg);
+    }
+  }
+  function pauseRotation(albumImg) {
+    const angle = getCurrentRotation();
+    albumImg.classList.remove("rotating");
+    albumImg.style.transform = `rotate(${angle}deg)`;
+    setAlbumRotating(false);
+    return angle;
+  }
+  function resumeRotation(albumImg, startAngle) {
+    updateRotationKeyframes(startAngle);
+    albumImg.classList.remove("rotating");
+    void albumImg.offsetWidth;
+    albumImg.classList.add("rotating");
+    setAlbumRotating(true);
+  }
+  function getCurrentRotation() {
+    const albumImg = document.getElementById("lyrics-album-image");
+    if (!albumImg)
+      return 0;
+    const style = window.getComputedStyle(albumImg);
+    const transform = style.getPropertyValue("transform");
+    if (!transform || transform === "none") {
+      return 0;
+    }
+    const vals = transform.split("(")[1].split(")")[0].split(",");
+    const a = Number(vals[0]);
+    const b = Number(vals[1]);
+    let angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+    if (angle < 0) {
+      angle += 360;
+    }
+    return angle;
+  }
+  function updateRotationKeyframes(startAngle = 0) {
+    const styleId = "rotation-keyframes-style";
+    let styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    styleEl.innerHTML = `
+    @keyframes rotation {
+      from { transform: rotate(${startAngle}deg); }
+      to { transform: rotate(${startAngle + 360}deg); }
+    }
+
+    #lyrics-album-image.rotating{
+      animation: rotation 10s linear infinite;
+    }
+  `;
   }
   function updateLyricsBackground() {
     const backgroundEl = document.getElementById("lyrics-background");
@@ -507,7 +589,7 @@
     }
   }
   function closeLyricsPage() {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     if (!lyricsPageActive || !originalPageState) {
       return;
     }
@@ -520,6 +602,8 @@
     (_a = document.getElementById("custom-lyrics-page")) == null ? void 0 : _a.remove();
     (_b = document.getElementById("custom-lyrics-style")) == null ? void 0 : _b.remove();
     (_c = document.getElementById("custom-lyrics-background-style")) == null ? void 0 : _c.remove();
+    (_d = document.getElementById("album-rotation-style")) == null ? void 0 : _d.remove();
+    setRotationDegree(0);
     if (originalPageState.children) {
       originalPageState.children.forEach((child) => {
         child.style.display = "";
@@ -694,6 +778,9 @@
           updateAlbumImage();
           updateLyricsBackground();
           resetLyricsViewScroll();
+        });
+        window.Spicetify.Player.addEventListener("onplaypause", () => {
+          handleAlbumRotation();
         });
       }
     }

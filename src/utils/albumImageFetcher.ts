@@ -1,3 +1,5 @@
+import { rotationDeg, setRotationDegree } from "../state/lyricsState";
+
 declare global {
   interface Window {
     Spicetify: any;
@@ -17,4 +19,8 @@ export function updateAlbumImage() {
   if (albumImage && imageUrl) {
     albumImage.src = imageUrl;
   }
+  /* if (imageUrl && albumImage.src !== imageUrl) {
+    setRotationDegree(0);
+  }
+  albumImage.style.transform = `rotate(${rotationDeg})`; */
 }

@@ -5,7 +5,6 @@ import {
   startX,
   startY,
   memorizedSelectedText,
-  currentHighlightedLine,
   highlightInterval,
   setOriginalPageState,
   setLyricsPageActive,
@@ -15,7 +14,10 @@ import {
   setMemorizedSelectedText,
   setCurrentHighlightedLine,
   setHighlightInterval,
-  setCurrentLyrics,
+  isAlbumRotating,
+  setAlbumRotating,
+  rotationDeg,
+  setRotationDegree,
 } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { updateAlbumImage, getAlbumImageUrl } from '../utils/albumImageFetcher';
@@ -89,7 +91,7 @@ export function showLyricsPage() {
       z-index: -1;
     "></div>
 
-    <!-- Left Column: Information (Static, No Scroll) -->
+    <!-- Left Column: Information -->
     <div style="
       width: 350px;
       padding: 32px;
@@ -116,7 +118,7 @@ export function showLyricsPage() {
 
       <!-- Album Image -->
       <img id="lyrics-album-image" src="" alt="Album Art" style="
-        width: 250px; height: 250px; border-radius: 8px; object-fit: cover;
+        width: 250px; height: 250px; border-radius: 50%; object-fit: cover;
         flex-shrink: 0; margin-bottom: 20px;
       "/>
 
@@ -138,7 +140,7 @@ export function showLyricsPage() {
       </button>
     </div>
 
-    <!-- Right Column: Lyrics (Scrollable) -->
+    <!-- Right Column: Lyrics -->
     <div id="lyrics-scroll-container" style="
       flex-grow: 1; /* Take remaining width */
       height: 100%; /* Fill parent height */
@@ -166,6 +168,7 @@ export function showLyricsPage() {
   lyricsContainer.innerHTML = lyricsHTML;
   mainView.appendChild(lyricsContainer);
   setLyricsPageActive(true);
+  
   lyricsContainer.setAttribute('tabindex', '0'); // Make it focusable
   lyricsContainer.focus();
 
@@ -297,6 +300,96 @@ export function showLyricsPage() {
     }
   `;
   document.head.appendChild(styleEl);
+
+  // If the song is playing before the lyrics page set it rotating, otherwise no
+  updateRotationKeyframes(rotationDeg);
+  const albumImg = document.getElementById("lyrics-album-image");
+  if (!albumImg) return;
+  albumImg.classList.add("rotating");
+  setAlbumRotating(true);
+  if (Spicetify.Player.isPlaying() != true){
+    // We still inject the animation but set it not playing
+    albumImg.classList.remove("rotating");
+    setAlbumRotating(false)
+  }
+}
+
+export function handleAlbumRotation() {
+  const albumImg = document.getElementById("lyrics-album-image");
+  if (!albumImg) return;
+  const angle = "angle " + getCurrentRotation();
+  if (isAlbumRotating) {
+    const saveAngle = pauseRotation(albumImg);
+    setRotationDegree(saveAngle);
+  } else {
+    resumeRotation(albumImg,rotationDeg);
+  }
+}
+
+function pauseRotation(albumImg:any) {
+  const angle = getCurrentRotation();
+
+  albumImg.classList.remove("rotating");
+
+  albumImg.style.transform = `rotate(${angle}deg)`;
+  setAlbumRotating(false);
+
+  return angle;
+}
+
+function resumeRotation(albumImg:any, startAngle:number) {
+  updateRotationKeyframes(startAngle);
+
+  // Reflow to apply the new animation rules
+  albumImg.classList.remove("rotating");
+  void albumImg.offsetWidth;
+  albumImg.classList.add("rotating");
+
+  setAlbumRotating(true);
+}
+
+function getCurrentRotation() {
+  const albumImg = document.getElementById("lyrics-album-image");
+  if (!albumImg) return 0;
+
+  const style = window.getComputedStyle(albumImg);
+  const transform = style.getPropertyValue("transform");
+
+  if (!transform || transform === "none") {
+    return 0; // no rotation
+  }
+
+  // transform looks like "matrix(a, b, c, d, e, f)"
+  const vals = transform.split("(")[1].split(")")[0].split(",");
+  const a = Number(vals[0]);
+  const b = Number(vals[1]);
+
+  let angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+  if (angle < 0) {
+    angle += 360;
+  }
+  return angle;
+}
+
+function updateRotationKeyframes(startAngle = 0) {
+  const styleId = "rotation-keyframes-style";
+  let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = styleId;
+    document.head.appendChild(styleEl);
+  }
+
+  styleEl.innerHTML = `
+    @keyframes rotation {
+      from { transform: rotate(${startAngle}deg); }
+      to { transform: rotate(${startAngle + 360}deg); }
+    }
+
+    #lyrics-album-image.rotating{
+      animation: rotation 10s linear infinite;
+    }
+  `;
 }
 
 // Function to update the dynamic background
@@ -327,6 +420,8 @@ export function closeLyricsPage() {
   document.getElementById('custom-lyrics-page')?.remove();
   document.getElementById('custom-lyrics-style')?.remove();
   document.getElementById('custom-lyrics-background-style')?.remove();
+  document.getElementById('album-rotation-style')?.remove();
+  setRotationDegree(0); // When closing the tab just reset the rotation
 
   // Restore original content visibility
   if (originalPageState.children) {
