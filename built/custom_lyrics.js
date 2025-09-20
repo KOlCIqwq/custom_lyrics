@@ -369,8 +369,8 @@
     <div id="lyrics-scroll-container" style="
       flex-grow: 1; /* Take remaining width */
       height: 100%; /* Fill parent height */
-      overflow-y: auto; /* Make ONLY this column scrollable */
-      overflow-x: hidden; /* Prevent horizontal scrolling */
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 32px 64px;
       max-width: 800px;
       margin: 0 auto;
@@ -503,6 +503,9 @@
     #lyrics-background {
       animation: backgroundPan 60s linear infinite;
     }
+    #lyrics-scroll-container {
+      scrollbar-width: none;
+    }
   `;
     document.head.appendChild(styleEl);
     updateRotationKeyframes(rotationDeg);
@@ -521,7 +524,6 @@
     if (!albumImg)
       return;
     const angle = "angle " + getCurrentRotation();
-    Spicetify.showNotification(angle);
     if (isAlbumRotating) {
       const saveAngle = pauseRotation(albumImg);
       setRotationDegree(saveAngle);
