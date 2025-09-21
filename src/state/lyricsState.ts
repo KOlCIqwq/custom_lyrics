@@ -18,6 +18,11 @@ export let currentHighlightedLine: string | null = null;
 export let isAlbumRotating = false;
 export let rotationDeg: number;
 export let scrolledAndStopped = false;
+export let isIdle = true;
+
+export function setIdle(active: boolean){
+  isIdle = active;
+}
 
 export function setScrolledAndStopped(state: boolean){
   scrolledAndStopped = state;

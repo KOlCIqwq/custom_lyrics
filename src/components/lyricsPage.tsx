@@ -19,7 +19,8 @@ import {
   rotationDeg,
   setRotationDegree,
   scrolledAndStopped,
-  setScrolledAndStopped
+  setScrolledAndStopped,
+  setIdle
 } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { updateAlbumImage, getAlbumImageUrl } from '../utils/albumImageFetcher';
@@ -223,6 +224,7 @@ export function showLyricsPage() {
 
   lyricsScrollContainer.onscroll = function () {
     setScrolledAndStopped(false);
+    setIdle(false);
 
     if (scrollTimeout) {
       clearTimeout(scrollTimeout);

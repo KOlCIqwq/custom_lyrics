@@ -8,6 +8,8 @@ import {
   setCurrentHighlightedLine,
   scrolledAndStopped,
   setScrolledAndStopped,
+  setIdle,
+  isIdle,
 } from '../state/lyricsState';
 
 declare global {
@@ -219,10 +221,16 @@ export function displaySyncedLyrics(data: any) {
           if (prevActiveEl) prevActiveEl.classList.remove('active');
         }
         const newActiveEl = document.getElementById(newActiveLineId);
-        if (newActiveEl && scrolledAndStopped == true) {
+        if (newActiveEl){
           newActiveEl.classList.add('active');
+          if(isIdle){
+            newActiveEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+        if (newActiveEl && scrolledAndStopped == true) {
           newActiveEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
           setScrolledAndStopped(false);
+          setIdle(true);
         }
         setCurrentHighlightedLine(newActiveLineId);
       } else if (!newActiveLineId && currentHighlightedLine) {
