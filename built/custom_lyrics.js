@@ -15,6 +15,10 @@
   var currentHighlightedLine = null;
   var isAlbumRotating = false;
   var rotationDeg;
+  var scrolledAndStopped = false;
+  function setScrolledAndStopped(state) {
+    scrolledAndStopped = state;
+  }
   function setOriginalPageState(state) {
     originalPageState = state;
   }
@@ -198,19 +202,22 @@
       box-sizing: border-box;
     }
     .lyric-line {
-      font-size: 24px;
-      margin: 16px 0;
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.3s, transform 0.3s;
-      text-align: center;
-      cursor: pointer;
-    }
-    .lyric-line.active {
-      opacity: 1;
-      color: var(--text-base, #ffffff);
-      font-weight: 700;
-      transform: scale(1.05);
-    }
+    font-size: 24px;
+    margin: 16px 0;
+    opacity: 0.6;
+    transition: opacity 0.3s, color 0.3s, transform 0.3s;
+    text-align: center;
+    cursor: pointer;
+    color: #ffffffc4;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+  }
+  .lyric-line.active {
+    color: #ffffffff;
+    opacity: 1;
+    font-weight: 1000;
+    transform: scale(1.05);
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+  }
   `;
     document.head.appendChild(styleEl);
     setHighlightInterval(
@@ -232,9 +239,10 @@
               prevActiveEl.classList.remove("active");
           }
           const newActiveEl = document.getElementById(newActiveLineId);
-          if (newActiveEl) {
+          if (newActiveEl && scrolledAndStopped == true) {
             newActiveEl.classList.add("active");
             newActiveEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            setScrolledAndStopped(false);
           }
           setCurrentHighlightedLine(newActiveLineId);
         } else if (!newActiveLineId && currentHighlightedLine) {
@@ -243,7 +251,7 @@
             prevActiveEl.classList.remove("active");
           setCurrentHighlightedLine(null);
         }
-      }, 250)
+      }, 150)
     );
   }
 
@@ -431,6 +439,16 @@
       }
       setIsDragging(false);
     });
+    let scrollTimeout = null;
+    lyricsScrollContainer.onscroll = function() {
+      setScrolledAndStopped(false);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+      scrollTimeout = setTimeout(() => {
+        setScrolledAndStopped(true);
+      }, 3e3);
+    };
     lyricsContainer.addEventListener("copy", (e) => e.stopPropagation());
     lyricsContainer.addEventListener("contextmenu", (e) => e.stopPropagation());
     lyricsContainer.addEventListener("keydown", (e) => {
