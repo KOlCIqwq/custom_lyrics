@@ -17,6 +17,11 @@ export let highlightInterval: number | null = null;
 export let currentHighlightedLine: string | null = null;
 export let isAlbumRotating = false;
 export let rotationDeg: number;
+export let scrolledAndStopped = false;
+
+export function setScrolledAndStopped(state: boolean){
+  scrolledAndStopped = state;
+}
 
 export function setOriginalPageState(state: OriginalPageState) {
   originalPageState = state;

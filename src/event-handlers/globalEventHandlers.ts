@@ -23,7 +23,7 @@ export function setupGlobalEventHandlers() {
       }
     }
   });
-
+  
   // Clean up on page navigation
   if (window.Spicetify?.Platform?.History?.listen) {
     window.Spicetify.Platform.History.listen(() => {

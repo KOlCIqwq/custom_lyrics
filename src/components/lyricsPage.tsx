@@ -18,6 +18,8 @@ import {
   setAlbumRotating,
   rotationDeg,
   setRotationDegree,
+  scrolledAndStopped,
+  setScrolledAndStopped
 } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { updateAlbumImage, getAlbumImageUrl } from '../utils/albumImageFetcher';
@@ -216,6 +218,20 @@ export function showLyricsPage() {
     setIsDragging(false);
   });
 
+  // Handle a scroll timer of 3 seconds
+  let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  lyricsScrollContainer.onscroll = function () {
+    setScrolledAndStopped(false);
+
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+    }
+    scrollTimeout = setTimeout(() => {
+      setScrolledAndStopped(true);
+    }, 2000);
+  };
+
   // Attach global events (copy, context menu, keyboard) to the main container
   lyricsContainer.addEventListener('copy', (e) => e.stopPropagation());
   lyricsContainer.addEventListener('contextmenu', (e) => e.stopPropagation());
@@ -315,6 +331,10 @@ export function showLyricsPage() {
     albumImg.classList.remove("rotating");
     setAlbumRotating(false)
   }
+}
+
+function test(message:string){
+  Spicetify.showNotification(message);
 }
 
 export function handleAlbumRotation() {
