@@ -114,22 +114,55 @@
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
+      if (data.syncedLyrics == null) {
+        throw new Error("No synced found");
+      }
       displaySyncedLyrics(data);
     } catch (error) {
-      if (loadingEl)
-        loadingEl.style.display = "none";
-      if (contentEl)
-        contentEl.style.display = "none";
-      if (errorEl)
-        errorEl.style.display = "block";
-      if (errorDetails)
-        errorDetails.textContent = `${title} by ${artist}`;
-      if (highlightInterval) {
-        clearInterval(highlightInterval);
-        setHighlightInterval(null);
+      const artists = track.artists;
+      let artistsname = [];
+      for (const artist2 of artists) {
+        Spicetify.showNotification(artist2.name);
+        artistsname.push(artist2.name);
       }
-      setCurrentHighlightedLine(null);
-      setCurrentLyrics([]);
+      if (await trySearchAPI(artistsname, title, duration_in_seconds, album_name) == false) {
+        if (loadingEl)
+          loadingEl.style.display = "none";
+        if (contentEl)
+          contentEl.style.display = "none";
+        if (errorEl)
+          errorEl.style.display = "block";
+        if (errorDetails)
+          errorDetails.textContent = `${title} by ${artist}`;
+        if (highlightInterval) {
+          clearInterval(highlightInterval);
+          setHighlightInterval(null);
+        }
+        setCurrentHighlightedLine(null);
+        setCurrentLyrics([]);
+      }
+    }
+  }
+  async function trySearchAPI(artists, title, duration, album_name) {
+    const baseUrl = "https://lrclib.net/api/search";
+    try {
+      let queryParams = "q=" + title;
+      for (const artist of artists) {
+        queryParams += " " + artist;
+      }
+      const url = `${baseUrl}?${queryParams.toString()}`;
+      const processed = url.replace(/%20/g, "+").replace(/%28/g, "(").replace(/%29/g, ")");
+      const response = await fetch(processed);
+      const songs = await response.json();
+      for (const song of songs) {
+        if (song.trackName === title && song.duration === duration) {
+          displaySyncedLyrics(song);
+          return true;
+        }
+      }
+      throw new Error("found nothing");
+    } catch (e) {
+      return false;
     }
   }
   function displaySyncedLyrics(data) {
@@ -151,23 +184,27 @@
       setHighlightInterval(null);
     }
     setCurrentHighlightedLine(null);
-    if (data.syncedLyrics) {
+    if (data.instrumental) {
+      currentLyrics.push({
+        time: 0,
+        line: "Instrumental, Enjoy!"
+      });
+    } else if (data.syncedLyrics) {
       const lines = data.syncedLyrics.split("\n");
-      setCurrentLyrics(
-        lines.map((line) => {
-          const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
-          if (match) {
-            const minutes = parseInt(match[1], 10);
-            const seconds = parseInt(match[2], 10);
-            const milliseconds = parseInt(match[3], 10);
-            const time = minutes * 60 + seconds + milliseconds / (match[3].length === 3 ? 1e3 : 100);
-            const text = match[4].trim();
-            if (text)
-              return { time, line: text };
-          }
-          return null;
-        }).filter(Boolean)
-      );
+      const parsedLyrics = lines.map((line) => {
+        const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
+        if (match) {
+          const minutes = parseInt(match[1], 10);
+          const seconds = parseInt(match[2], 10);
+          const milliseconds = parseInt(match[3], 10);
+          const time = minutes * 60 + seconds + milliseconds / (match[3].length === 3 ? 1e3 : 100);
+          const text = match[4].trim();
+          if (text)
+            return { time, line: text };
+        }
+        return null;
+      }).filter(Boolean);
+      setCurrentLyrics(parsedLyrics);
     }
     if (currentLyrics.length === 0 && data.plainLyrics) {
       data.plainLyrics.split("\n").map((line) => line.trim()).filter(Boolean).forEach((line) => currentLyrics.push({ time: -1, line }));

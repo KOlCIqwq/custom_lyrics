@@ -12,6 +12,18 @@ import {
   isIdle,
 } from '../state/lyricsState';
 
+type Song = {
+  id: number;
+  name: string;
+  trackName: string;
+  artistName: string;
+  albumName: string;
+  duration: number;
+  instrumental: boolean;
+  plainLyrics: string;
+  syncedLyrics: string;
+};
+
 declare global {
   interface Window {
     Spicetify: any;
@@ -75,24 +87,64 @@ export async function fetchAndDisplayLyrics() {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    const data:Song = await response.json();
+    if (data.syncedLyrics == null){
+      throw new Error("No synced found")
+    }
+
     displaySyncedLyrics(data);
   } catch (error) {
-    if (loadingEl) loadingEl.style.display = 'none';
-    if (contentEl) contentEl.style.display = 'none';
-    if (errorEl) errorEl.style.display = 'block';
-    if (errorDetails) errorDetails.textContent = `${title} by ${artist}`;
-
-    if (highlightInterval) {
+    // We can try to add a fallback here [DONE]
+    // By using the search API or 163
+    const artists = track.artists;
+    // We pass the full list of artist instead of the first one
+    let artistsname: Array<string> = [];
+    for (const artist of artists) {
+      artistsname.push(artist.name);
+    }
+    if (await trySearchAPI(artistsname, title, duration_in_seconds, album_name) == false) {
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'block';
+      if (errorDetails) errorDetails.textContent = `${title} by ${artist}`;
+      if (highlightInterval) {
       clearInterval(highlightInterval);
       setHighlightInterval(null);
+      }
+      setCurrentHighlightedLine(null);
+      setCurrentLyrics([]);
     }
-    setCurrentHighlightedLine(null);
-    setCurrentLyrics([]);
   }
 }
 
-export function displaySyncedLyrics(data: any) {
+async function trySearchAPI(artists:Array<string>,title:string,duration:number,album_name:string){
+  const baseUrl = 'https://lrclib.net/api/search';
+  try {
+    let queryParams = 'q=' + title;
+    for (const artist of artists){
+      queryParams += ' ' + artist;
+    }
+    const url = `${baseUrl}?${queryParams.toString()}`;
+    const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
+    const response = await fetch(processed);
+    const songs: Song[] = await response.json();
+
+    for (const song of songs){
+      if (song.trackName === title && song.duration === duration){
+        // Highly confident that this is right song
+        displaySyncedLyrics(song);
+        return true;
+      }
+    }
+    throw new Error("found nothing");
+  }
+  catch(e){
+    return false;
+  }
+}
+
+
+export function displaySyncedLyrics(data: Song) {
   const contentEl = document.getElementById('lyrics-content');
   const loadingEl = document.getElementById('lyrics-loading');
   const errorEl = document.getElementById('lyrics-error');
@@ -111,10 +163,15 @@ export function displaySyncedLyrics(data: any) {
   }
   setCurrentHighlightedLine(null);
 
-  if (data.syncedLyrics) {
+  if (data.instrumental){
+    currentLyrics.push({
+      time: 0,
+      line: "Instrumental, Enjoy!",
+    })
+  }
+  else if (data.syncedLyrics) {
     const lines = data.syncedLyrics.split('\n');
-    setCurrentLyrics(
-      lines
+    const parsedLyrics = lines
         .map((line: string) => {
           const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/);
           if (match) {
@@ -127,8 +184,12 @@ export function displaySyncedLyrics(data: any) {
           }
           return null;
         })
-        .filter(Boolean) as { time: number; line: string }[],
-    );
+        .filter(Boolean) as { time: number; line: string }[];
+    /* parsedLyrics.unshift({
+      time: -1,
+      line: `${album_name} • ${artist}`,
+    }) */
+    setCurrentLyrics(parsedLyrics);
   }
 
   if (currentLyrics.length === 0 && data.plainLyrics) {
