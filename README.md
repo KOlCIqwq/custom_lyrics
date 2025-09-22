@@ -5,6 +5,13 @@ Spotify sometimes fails to fetch them, even when Musixmatch has them, so I built
 
 ![Screenshot](https://raw.githubusercontent.com/KOlCIqwq/custom_lyrics/refs/heads/main/custom-lyrics.png)
 
+## Features
+- Fetch the lyrics
+- Copy it
+- Autofocus
+- Spinning uweuwuw
+- Translation (TODO)
+
 ## Use it
 Use it with [Spicetify](https://github.com/spicetify/spicetify-cli)
 
