@@ -122,7 +122,6 @@
       const artists = track.artists;
       let artistsname = [];
       for (const artist2 of artists) {
-        Spicetify.showNotification(artist2.name);
         artistsname.push(artist2.name);
       }
       if (await trySearchAPI(artistsname, title, duration_in_seconds, album_name) == false) {
@@ -151,8 +150,7 @@
         queryParams += " " + artist;
       }
       const url = `${baseUrl}?${queryParams.toString()}`;
-      const processed = url.replace(/%20/g, "+").replace(/%28/g, "(").replace(/%29/g, ")");
-      const response = await fetch(processed);
+      const response = await fetch(url);
       const songs = await response.json();
       for (const song of songs) {
         if (song.trackName === title && song.duration === duration) {

@@ -125,8 +125,9 @@ async function trySearchAPI(artists:Array<string>,title:string,duration:number,a
       queryParams += ' ' + artist;
     }
     const url = `${baseUrl}?${queryParams.toString()}`;
-    const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
-    const response = await fetch(processed);
+    //Spicetify.showNotification(url);
+    //const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
+    const response = await fetch(url);
     const songs: Song[] = await response.json();
 
     for (const song of songs){
