@@ -20,7 +20,8 @@ import {
   setRotationDegree,
   scrolledAndStopped,
   setScrolledAndStopped,
-  setIdle
+  setIdle,
+  isPlainText
 } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { updateAlbumImage, getAlbumImageUrl } from '../utils/albumImageFetcher';
@@ -270,6 +271,9 @@ export function showLyricsPage() {
   const copyButton = document.getElementById('lyrics-copy-button');
   if (copyButton) {
     copyButton.addEventListener('click', async () => {
+      if (isPlainText == true){
+        return;
+      }
       lyricsContainer.focus();
       const selection = window.getSelection();
       let textToCopy = '';

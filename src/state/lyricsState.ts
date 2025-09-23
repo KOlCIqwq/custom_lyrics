@@ -19,6 +19,11 @@ export let isAlbumRotating = false;
 export let rotationDeg: number;
 export let scrolledAndStopped = false;
 export let isIdle = true;
+export let isPlainText = false;
+
+export function setIsPlainText(active:boolean){
+  isPlainText = active;
+}
 
 export function setIdle(active: boolean){
   isIdle = active;

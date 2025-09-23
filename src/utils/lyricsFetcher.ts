@@ -10,6 +10,7 @@ import {
   setScrolledAndStopped,
   setIdle,
   isIdle,
+  setIsPlainText,
 } from '../state/lyricsState';
 
 type Song = {
@@ -102,6 +103,7 @@ export async function fetchAndDisplayLyrics() {
     for (const artist of artists) {
       artistsname.push(artist.name);
     }
+
     if (await trySearchAPI(artistsname, title, duration_in_seconds, album_name) == false) {
       if (loadingEl) loadingEl.style.display = 'none';
       if (contentEl) contentEl.style.display = 'none';
@@ -190,6 +192,7 @@ export function displaySyncedLyrics(data: Song) {
       time: -1,
       line: `${album_name} • ${artist}`,
     }) */
+    setIsPlainText(false);
     setCurrentLyrics(parsedLyrics);
   }
 
@@ -198,7 +201,8 @@ export function displaySyncedLyrics(data: Song) {
       .split('\n')
       .map((line: string) => line.trim())
       .filter(Boolean)
-      .forEach((line: string) => currentLyrics.push({ time: -1, line }));
+      .forEach((line: string) => currentLyrics.push({ time: 99999999, line }));
+    setIsPlainText(true);
   }
 
   if (contentEl) {
