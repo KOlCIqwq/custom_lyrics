@@ -12,6 +12,7 @@ import {
   isIdle,
   setIsPlainText,
 } from '../state/lyricsState';
+import { getNELyrics, searchId } from './netEasyFetcher';
 
 type Song = {
   id: number;
@@ -92,6 +93,16 @@ export async function fetchAndDisplayLyrics() {
     if (data.syncedLyrics == null){
       throw new Error("No synced found")
     }
+
+    const artists = track.artists;
+    // We pass the full list of artist instead of the first one
+    let artistsname: Array<string> = [];
+    for (const artist of artists) {
+      artistsname.push(artist.name);
+    }
+
+    const NEsongId: number|undefined = await searchId(artistsname, title, duration, album_name);
+    //const NEdata = getNELyrics(NEsongId);
 
     displaySyncedLyrics(data);
   } catch (error) {
