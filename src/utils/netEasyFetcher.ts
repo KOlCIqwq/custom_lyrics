@@ -75,10 +75,6 @@ export async function getNELyrics(songId:number|undefined){
         debug("got something")
         return text
     }catch(e){
-        if (e instanceof Error) {
-            Spicetify.showNotification(e.message, true);
-        } else {
-            Spicetify.showNotification(String(e), true);
-        }
+        
     }
 }

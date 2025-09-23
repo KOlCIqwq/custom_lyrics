@@ -315,6 +315,6 @@ export function displaySyncedLyrics(data: Song) {
         if (prevActiveEl) prevActiveEl.classList.remove('active');
         setCurrentHighlightedLine(null);
       }
-    }, 150), // Interval can be a bit faster for better accuracy
+    }, 250), // Interval can be a bit faster for better accuracy
   );
 }

@@ -310,7 +310,8 @@ export function showLyricsPage() {
   // Add a style element for the background animation
   const styleEl = document.createElement('style');
   styleEl.id = 'custom-lyrics-background-style';
-  styleEl.innerHTML = `
+  // Eating a bit GPU, since not so evident, consider disabling it
+  /* styleEl.innerHTML = `
     @keyframes backgroundPan {
       0%, 100% { background-position: 0% 0%; }
       25% { background-position: 10% 20%; }
@@ -323,7 +324,7 @@ export function showLyricsPage() {
     #lyrics-scroll-container {
       scrollbar-width: none;
     }
-  `;
+  `; */
   document.head.appendChild(styleEl);
 
   // If the song is playing before the lyrics page set it rotating, otherwise no
