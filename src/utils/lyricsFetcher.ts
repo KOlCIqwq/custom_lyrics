@@ -74,7 +74,6 @@ export async function fetchAndDisplayLyrics() {
 
   if (headerInfo) headerInfo.textContent = title;
   if (artistInfo) artistInfo.textContent = artist;
-
   try {
     const baseUrl = 'https://lrclib.net/api/get';
     const queryParams = new URLSearchParams({
@@ -93,6 +92,7 @@ export async function fetchAndDisplayLyrics() {
     }
 
     if (!response.ok) {
+      Spicetify.showNotification("Request failed");
       throw new Error(`HTTP ${response.status}`);
     }
 
@@ -183,6 +183,8 @@ export function displaySyncedLyrics(data: Song) {
   const contentEl = document.getElementById('lyrics-content');
   const loadingEl = document.getElementById('lyrics-loading');
   const errorEl = document.getElementById('lyrics-error');
+
+  Spicetify.showNotification("Fetched!");
 
   if (loadingEl) loadingEl.style.display = 'none';
   if (errorEl) {

@@ -20,6 +20,11 @@ export let rotationDeg: number;
 export let scrolledAndStopped = false;
 export let isIdle = true;
 export let isPlainText = false;
+export let preferredLanguage: string = 'any';
+
+export function setPreferredLanguage(lang: string) {
+  preferredLanguage = lang;
+}
 
 export function setIsPlainText(active:boolean){
   isPlainText = active;
