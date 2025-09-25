@@ -74,6 +74,8 @@ export async function fetchAndDisplayLyrics() {
 
   if (headerInfo) headerInfo.textContent = title;
   if (artistInfo) artistInfo.textContent = artist;
+
+  let careSearchPlainLyrics = "";
   try {
     const baseUrl = 'https://lrclib.net/api/get';
     const queryParams = new URLSearchParams({
@@ -92,12 +94,19 @@ export async function fetchAndDisplayLyrics() {
     }
 
     if (!response.ok) {
-      Spicetify.showNotification("Request failed");
       throw new Error(`HTTP ${response.status}`);
     }
 
     const data:Song = await response.json();
     if (data.syncedLyrics == null){
+      if (data.plainLyrics != null){
+        // If synced is not available but plain yes, then assign 
+        // for fallback when searching has found nothing (edge case)
+        if (careSearchPlainLyrics != null){
+          careSearchPlainLyrics = ""; // Reset it
+        }
+        careSearchPlainLyrics = data.plainLyrics;
+      }
       throw new Error("No synced found")
     }
 
@@ -126,7 +135,7 @@ export async function fetchAndDisplayLyrics() {
       artistsname.push(artist.name);
     }
 
-    const success = await trySearchAPI(artists, title, duration_in_seconds, album_name, requestedTrackUri);
+    const success = await trySearchAPI(artists, title, duration_in_seconds, album_name, requestedTrackUri,careSearchPlainLyrics);
 
     if (!success) {
       // Final check before showing an error
@@ -147,7 +156,12 @@ export async function fetchAndDisplayLyrics() {
   }
 }
 
-async function trySearchAPI(artists:Array<string>,title:string,duration:number,album_name:string,requestedTrackUri: string):Promise<boolean>{
+async function trySearchAPI(artists:Array<string>,
+  title:string,
+  duration:number,
+  album_name:string,
+  requestedTrackUri: string,
+  careSearchPlainLyrics:string):Promise<boolean>{
   const baseUrl = 'https://lrclib.net/api/search';
   try {
     let queryParams = 'q=' + title;
@@ -159,7 +173,6 @@ async function trySearchAPI(artists:Array<string>,title:string,duration:number,a
     if (window.Spicetify.Player.data?.item?.uri !== requestedTrackUri) {
       return true; // Return true to prevent the error message from showing
     }
-    //Spicetify.showNotification(url);
     //const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
     const response = await fetch(url);
     const songs: Song[] = await response.json();
@@ -171,9 +184,25 @@ async function trySearchAPI(artists:Array<string>,title:string,duration:number,a
         return true;
       }
     }
+    // When careSearch has plain lyrics, but fuzzy search fails (edge)
+    if (careSearchPlainLyrics != null){
+      const sus:Song = {
+        id: 0,
+        name: title,
+        trackName: title,
+        artistName: artists[0],
+        albumName: album_name,
+        duration: duration,
+        instrumental: false,
+        syncedLyrics: "",
+        plainLyrics: careSearchPlainLyrics,
+      }
+      displaySyncedLyrics(sus);
+    }
     throw new Error("found nothing");
   }
   catch(e){
+
     return false;
   }
 }
@@ -183,8 +212,6 @@ export function displaySyncedLyrics(data: Song) {
   const contentEl = document.getElementById('lyrics-content');
   const loadingEl = document.getElementById('lyrics-loading');
   const errorEl = document.getElementById('lyrics-error');
-
-  Spicetify.showNotification("Fetched!");
 
   if (loadingEl) loadingEl.style.display = 'none';
   if (errorEl) {
