@@ -63,6 +63,9 @@ export async function fetchAndDisplayLyrics() {
     window.Spicetify.showNotification('Could not get track info.', true);
     return;
   }
+
+  const requestedTrackUri = track.uri;
+
   const artist = track.artists[0].name ?? '';
   const title = track.name;
   const album_name = track.album?.name ?? '';
@@ -85,6 +88,10 @@ export async function fetchAndDisplayLyrics() {
     const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
     const response = await fetch(processed);
 
+    if (window.Spicetify.Player.data?.item?.uri !== requestedTrackUri) {
+      return;
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -104,6 +111,10 @@ export async function fetchAndDisplayLyrics() {
     const NEsongId: number|undefined = await searchId(artistsname, title, duration, album_name);
     //const NEdata = getNELyrics(NEsongId);
 
+    if (window.Spicetify.Player.data?.item?.uri !== requestedTrackUri) {
+      return;
+    }
+
     displaySyncedLyrics(data);
   } catch (error) {
     // We can try to add a fallback here [DONE]
@@ -115,7 +126,13 @@ export async function fetchAndDisplayLyrics() {
       artistsname.push(artist.name);
     }
 
-    if (await trySearchAPI(artistsname, title, duration_in_seconds, album_name) == false) {
+    const success = await trySearchAPI(artists, title, duration_in_seconds, album_name, requestedTrackUri);
+
+    if (!success) {
+      // Final check before showing an error
+      if (window.Spicetify.Player.data?.item?.uri !== requestedTrackUri) {
+        return; // Don't show an error for a track that's not even playing anymore.
+      }
       if (loadingEl) loadingEl.style.display = 'none';
       if (contentEl) contentEl.style.display = 'none';
       if (errorEl) errorEl.style.display = 'block';
@@ -130,7 +147,7 @@ export async function fetchAndDisplayLyrics() {
   }
 }
 
-async function trySearchAPI(artists:Array<string>,title:string,duration:number,album_name:string){
+async function trySearchAPI(artists:Array<string>,title:string,duration:number,album_name:string,requestedTrackUri: string):Promise<boolean>{
   const baseUrl = 'https://lrclib.net/api/search';
   try {
     let queryParams = 'q=' + title;
@@ -138,6 +155,10 @@ async function trySearchAPI(artists:Array<string>,title:string,duration:number,a
       queryParams += ' ' + artist;
     }
     const url = `${baseUrl}?${queryParams.toString()}`;
+
+    if (window.Spicetify.Player.data?.item?.uri !== requestedTrackUri) {
+      return true; // Return true to prevent the error message from showing
+    }
     //Spicetify.showNotification(url);
     //const processed = url.replace(/%20/g, '+').replace(/%28/g, '(').replace(/%29/g, ')');
     const response = await fetch(url);
@@ -252,7 +273,6 @@ export function displaySyncedLyrics(data: Song) {
   styleEl.id = 'custom-lyrics-style';
   styleEl.textContent = `
     #lyrics-content {
-      /* Add space at the bottom equal to half the screen height */
       padding-bottom: 50vh;
       box-sizing: border-box;
     }
@@ -273,7 +293,7 @@ export function displaySyncedLyrics(data: Song) {
     transform: scale(1.05);
     text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
   }
-  `;
+  `; 
   document.head.appendChild(styleEl);
 
   // Start highlighting interval

@@ -17,6 +17,10 @@
   var rotationDeg;
   var scrolledAndStopped = false;
   var isIdle = true;
+  var isPlainText = false;
+  function setIsPlainText(active) {
+    isPlainText = active;
+  }
   function setIdle(active) {
     isIdle = active;
   }
@@ -57,9 +61,55 @@
     currentHighlightedLine = lineId;
   }
 
+  // src/utils/netEasyFetcher.ts
+  async function searchId(artists, title, album_name, duration) {
+    const baseUrl = "https://apis.netstart.cn/music/search";
+    try {
+      let queryParams = "keywords=" + title;
+      for (const artist of artists) {
+        queryParams += " " + artist;
+      }
+      queryParams += "&limit=10";
+      const url = `${baseUrl}?${queryParams.toString()}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      let songId = 0;
+      if (response.ok) {
+        for (const song of data.result.songs) {
+          if (song.name != title) {
+            continue;
+          }
+          let count = 0;
+          for (const searchedArtist of song.artists) {
+            if (artists.includes(searchedArtist.name))
+              count++;
+          }
+          if (Math.abs(count - song.artists.length) > 1) {
+            continue;
+          }
+          if (Math.abs(duration - song.duration) > 500) {
+            continue;
+          }
+          songId = song.id;
+          break;
+        }
+      }
+      if (songId == 0) {
+        return -1;
+      }
+      return songId;
+    } catch (e) {
+      if (e instanceof Error) {
+        Spicetify.showNotification(e.message, true);
+      } else {
+        Spicetify.showNotification(String(e), true);
+      }
+    }
+  }
+
   // src/utils/lyricsFetcher.ts
   async function fetchAndDisplayLyrics() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
     const loadingEl = document.getElementById("lyrics-loading");
     const contentEl = document.getElementById("lyrics-content");
     const errorEl = document.getElementById("lyrics-error");
@@ -90,6 +140,7 @@
       window.Spicetify.showNotification("Could not get track info.", true);
       return;
     }
+    const requestedTrackUri = track.uri;
     const artist = (_e = track.artists[0].name) != null ? _e : "";
     const title = track.name;
     const album_name = (_g = (_f = track.album) == null ? void 0 : _f.name) != null ? _g : "";
@@ -110,12 +161,26 @@
       const url = `${baseUrl}?${queryParams.toString()}`;
       const processed = url.replace(/%20/g, "+").replace(/%28/g, "(").replace(/%29/g, ")");
       const response = await fetch(processed);
+      if (((_k = (_j = window.Spicetify.Player.data) == null ? void 0 : _j.item) == null ? void 0 : _k.uri) !== requestedTrackUri) {
+        Spicetify.showNotification("Track changed, discarding stale lyrics response.");
+        return;
+      }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
       if (data.syncedLyrics == null) {
         throw new Error("No synced found");
+      }
+      const artists = track.artists;
+      let artistsname = [];
+      for (const artist2 of artists) {
+        artistsname.push(artist2.name);
+      }
+      const NEsongId = await searchId(artistsname, title, duration, album_name);
+      if (((_m = (_l = window.Spicetify.Player.data) == null ? void 0 : _l.item) == null ? void 0 : _m.uri) !== requestedTrackUri) {
+        Spicetify.showNotification("1Track changed, discarding stale lyrics response.");
+        return;
       }
       displaySyncedLyrics(data);
     } catch (error) {
@@ -124,7 +189,11 @@
       for (const artist2 of artists) {
         artistsname.push(artist2.name);
       }
-      if (await trySearchAPI(artistsname, title, duration_in_seconds, album_name) == false) {
+      const success = await trySearchAPI(artists, title, duration_in_seconds, album_name, requestedTrackUri);
+      if (!success) {
+        if (((_o = (_n = window.Spicetify.Player.data) == null ? void 0 : _n.item) == null ? void 0 : _o.uri) !== requestedTrackUri) {
+          return;
+        }
         if (loadingEl)
           loadingEl.style.display = "none";
         if (contentEl)
@@ -142,7 +211,8 @@
       }
     }
   }
-  async function trySearchAPI(artists, title, duration, album_name) {
+  async function trySearchAPI(artists, title, duration, album_name, requestedTrackUri) {
+    var _a, _b;
     const baseUrl = "https://lrclib.net/api/search";
     try {
       let queryParams = "q=" + title;
@@ -150,6 +220,10 @@
         queryParams += " " + artist;
       }
       const url = `${baseUrl}?${queryParams.toString()}`;
+      if (((_b = (_a = window.Spicetify.Player.data) == null ? void 0 : _a.item) == null ? void 0 : _b.uri) !== requestedTrackUri) {
+        Spicetify.showNotification("2Track changed during fallback, discarding response.");
+        return true;
+      }
       const response = await fetch(url);
       const songs = await response.json();
       for (const song of songs) {
@@ -202,10 +276,12 @@
         }
         return null;
       }).filter(Boolean);
+      setIsPlainText(false);
       setCurrentLyrics(parsedLyrics);
     }
     if (currentLyrics.length === 0 && data.plainLyrics) {
-      data.plainLyrics.split("\n").map((line) => line.trim()).filter(Boolean).forEach((line) => currentLyrics.push({ time: -1, line }));
+      data.plainLyrics.split("\n").map((line) => line.trim()).filter(Boolean).forEach((line) => currentLyrics.push({ time: 99999999, line }));
+      setIsPlainText(true);
     }
     if (contentEl) {
       contentEl.innerHTML = currentLyrics.map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">${lyric.line}</p>`).join("");
@@ -236,7 +312,6 @@
     styleEl.id = "custom-lyrics-style";
     styleEl.textContent = `
     #lyrics-content {
-      /* Add space at the bottom equal to half the screen height */
       padding-bottom: 50vh;
       box-sizing: border-box;
     }
@@ -296,7 +371,7 @@
             prevActiveEl.classList.remove("active");
           setCurrentHighlightedLine(null);
         }
-      }, 150)
+      }, 250)
     );
   }
 
@@ -527,6 +602,9 @@
     const copyButton = document.getElementById("lyrics-copy-button");
     if (copyButton) {
       copyButton.addEventListener("click", async () => {
+        if (isPlainText == true) {
+          return;
+        }
         lyricsContainer.focus();
         const selection = window.getSelection();
         let textToCopy = "";
@@ -557,20 +635,6 @@
     fetchAndDisplayLyrics();
     const styleEl = document.createElement("style");
     styleEl.id = "custom-lyrics-background-style";
-    styleEl.innerHTML = `
-    @keyframes backgroundPan {
-      0%, 100% { background-position: 0% 0%; }
-      25% { background-position: 10% 20%; }
-      50% { background-position: 0% 0%; }
-      75% { background-position: -10% -20%; }
-    }
-    #lyrics-background {
-      animation: backgroundPan 60s linear infinite;
-    }
-    #lyrics-scroll-container {
-      scrollbar-width: none;
-    }
-  `;
     document.head.appendChild(styleEl);
     updateRotationKeyframes(rotationDeg);
     const albumImg = document.getElementById("lyrics-album-image");
