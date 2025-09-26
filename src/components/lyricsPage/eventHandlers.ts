@@ -13,8 +13,14 @@ import {
     setPreferredLanguage,
     rotationDeg,
     setRotationDegree,
+    currentLyrics,
+    translationEnabled,
+    setTranslationEnabled,
+    translatedLyrics,
+    setTranslatedLyrics,
 } from '../../state/lyricsState';
-import { fetchAndDisplayLyrics } from '../../utils/lyricsFetcher';
+import { fetchAndDisplayLyrics, handleTranslations } from '../../utils/lyricsFetcher';
+import { processFullLyrics } from '../../utils/translate';
 import { closeLyricsPage } from './index';
 import { pauseRotation, resumeRotation } from './utils';
 
@@ -173,8 +179,6 @@ export function attachEventHandlers(lyricsContainer: HTMLElement) {
             setPreferredLanguage(newLanguage);
             Spicetify.LocalStorage.set('lyrics-plus-language', newLanguage);
             Spicetify.showNotification(`Lyrics language set to: ${languageSelect.options[languageSelect.selectedIndex].text}`);
-            // Re-fetch lyrics with the new preference
-            fetchAndDisplayLyrics(); 
           });
         }
       
@@ -193,6 +197,27 @@ export function attachEventHandlers(lyricsContainer: HTMLElement) {
               const savedAngle = pauseRotation(albumImg);
               setRotationDegree(savedAngle);
             }
+          });
+        }
+
+        const translateToggle = document.getElementById('setting-toggle-translation') as HTMLInputElement;
+        if (translateToggle) {
+          // Load saved preference
+          //const savedTranslationToggle = Spicetify.LocalStorage.get('translation-enabled') === 'true';
+          //translateToggle.checked = savedTranslationToggle;
+          //setTranslationEnabled(savedTranslationToggle);
+          const savedPreference = Spicetify.LocalStorage.get('translation-enabled') === 'true';
+          translateToggle.checked = savedPreference;
+          setTranslationEnabled(savedPreference);
+          translateToggle.addEventListener('change', () => {
+            if (!currentLyrics || currentLyrics.length === 0) {
+              Spicetify.showNotification('Lyrics not available for translation.', true);
+              translateToggle.checked = !translateToggle.checked; // Revert the checkbox
+              return;
+            }
+            handleTranslations();
+            Spicetify.LocalStorage.set('translation-enabled', translateToggle.checked.toString());
+            //Spicetify.showNotification(`Translations ${translateToggle.checked ? 'Enabled' : 'Disabled'}`);
           });
         }
       }

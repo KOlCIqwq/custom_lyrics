@@ -1,8 +1,8 @@
-import { lyricsPageActive } from '../state/lyricsState';
+import { firstTimeLoadTranslation, lyricsPageActive, setTfirstTimeLoadTranslation, setTranslatedLyrics, translationEnabled } from '../state/lyricsState';
 import { showLyricsPage, closeLyricsPage } from '../components/lyricsPage/index';
 import { updateLyricsBackground } from '../components/lyricsPage/ui';
 import { highlightInterval, setHighlightInterval, setCurrentHighlightedLine, setMemorizedSelectedText } from '../state/lyricsState';
-import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
+import { fetchAndDisplayLyrics, handleTranslations } from '../utils/lyricsFetcher';
 import { createLyricsButton } from '../components/lyricsButton';
 import { updateAlbumImage } from '../utils/albumImageFetcher';
 import { handleAlbumRotation } from '../components/lyricsPage/utils';
@@ -67,6 +67,7 @@ export function setupGlobalEventHandlers() {
         // Reset the copy text if song changes
         setMemorizedSelectedText(null);
         updateAlbumImage();
+
         updateLyricsBackground(); // Update background on song change
         resetLyricsViewScroll(); // Reset the page to top
       });

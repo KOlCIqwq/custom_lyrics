@@ -11,8 +11,16 @@ import {
   setIdle,
   isIdle,
   setIsPlainText,
+  translationEnabled,
+  translatedLyrics,
+  setTranslatedLyrics,
+  setTranslationEnabled,
+  firstTimeLoadTranslation,
+  setTfirstTimeLoadTranslation,
+  setActiveLyricRequestUri,
 } from '../state/lyricsState';
 import { getNELyrics, searchId } from './netEasyFetcher';
+import { processFullLyrics } from './translate';
 
 type Song = {
   id: number;
@@ -61,10 +69,13 @@ export async function fetchAndDisplayLyrics() {
   const track = window.Spicetify.Player.data?.item;
   if (!track || !track.artists || !track.artists.length) {
     window.Spicetify.showNotification('Could not get track info.', true);
+    setActiveLyricRequestUri(null);
     return;
   }
 
   const requestedTrackUri = track.uri;
+  
+  setActiveLyricRequestUri(requestedTrackUri);
 
   const artist = track.artists[0].name ?? '';
   const title = track.name;
@@ -124,7 +135,7 @@ export async function fetchAndDisplayLyrics() {
       return;
     }
 
-    displaySyncedLyrics(data);
+    displaySyncedLyrics(data, requestedTrackUri);
   } catch (error) {
     // We can try to add a fallback here [DONE]
     // By using the search API or 163
@@ -180,7 +191,7 @@ async function trySearchAPI(artists:Array<string>,
     for (const song of songs){
       if (song.trackName === title && song.duration === duration){
         // Highly confident that this is right song
-        displaySyncedLyrics(song);
+        displaySyncedLyrics(song,requestedTrackUri);
         return true;
       }
     }
@@ -197,7 +208,7 @@ async function trySearchAPI(artists:Array<string>,
         syncedLyrics: "",
         plainLyrics: careSearchPlainLyrics,
       }
-      displaySyncedLyrics(sus);
+      displaySyncedLyrics(sus,requestedTrackUri);
     }
     throw new Error("found nothing");
   }
@@ -207,8 +218,30 @@ async function trySearchAPI(artists:Array<string>,
   }
 }
 
+export function handleTranslations(){
+  const contentEl = document.getElementById('lyrics-content');
+  if (contentEl){
+    const willBeEnabled = !translationEnabled;
+    setTranslationEnabled(willBeEnabled);
+    if (translationEnabled) {
+      insertTranslations(translatedLyrics); 
+      contentEl.classList.add('translation-visible');
+    } else {
+      contentEl.classList.remove('translation-visible');
+    }
+  }
+}
 
-export function displaySyncedLyrics(data: Song) {
+export function insertTranslations(translatedLyrics: { time:number, line: string }[]) {
+  for (let i = 0; i < translatedLyrics.length; i++) {
+    const el = document.getElementById(`translated-line-${i}`);
+    if (el) {
+      el.textContent = translatedLyrics[i].line;
+    }
+  }
+}
+
+export function displaySyncedLyrics(data: Song, trackUri: string) {
   const contentEl = document.getElementById('lyrics-content');
   const loadingEl = document.getElementById('lyrics-loading');
   const errorEl = document.getElementById('lyrics-error');
@@ -226,6 +259,9 @@ export function displaySyncedLyrics(data: Song) {
     setHighlightInterval(null);
   }
   setCurrentHighlightedLine(null);
+  setCurrentLyrics([]);
+  setTranslatedLyrics([]);
+  setTfirstTimeLoadTranslation(true);
 
   if (data.instrumental){
     currentLyrics.push({
@@ -255,6 +291,8 @@ export function displaySyncedLyrics(data: Song) {
     }) */
     setIsPlainText(false);
     setCurrentLyrics(parsedLyrics);
+    processFullLyrics(currentLyrics,trackUri); 
+    setTfirstTimeLoadTranslation(false);
   }
 
   if (currentLyrics.length === 0 && data.plainLyrics) {
@@ -267,9 +305,27 @@ export function displaySyncedLyrics(data: Song) {
   }
 
   if (contentEl) {
-    contentEl.innerHTML = currentLyrics
-      .map((lyric, index) => `<p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">${lyric.line}</p>`)
-      .join('');
+    let html = "";
+    for (let index = 0; index < currentLyrics.length; index++) {
+      const lyric = currentLyrics[index];
+      const translation = translatedLyrics[index]?.line ?? ""; // Match translation index
+      
+      html += `
+        <div class="lyric-line-container">
+          <p id="lyric-line-${index}" class="lyric-line" data-time="${lyric.time}">
+            ${lyric.line}
+          </p>
+          <p id="translated-line-${index}" class="translated-lyric-line">
+            ${translation}
+          </p>
+        </div>
+      `;
+    }
+    contentEl.innerHTML = html;
+
+    if (translationEnabled) {
+      contentEl.classList.add('translation-visible');
+    }
 
     contentEl.addEventListener('click', (e) => {
       const selection = window.getSelection();
@@ -305,23 +361,45 @@ export function displaySyncedLyrics(data: Song) {
       padding-bottom: 50vh;
       box-sizing: border-box;
     }
+    .lyric-line-container {
+      margin: 16px 0;
+    }
+    #lyrics-content.translation-visible .lyric-line-container {
+      margin: 28px 0;
+    }
+    .translated-lyric-line {
+      font-size: 18px;
+      margin-top: 8px;
+      opacity: 0.5;
+      text-align: center;
+      color: #ffffffb3;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+      display: none;
+    }
     .lyric-line {
-    font-size: 24px;
-    margin: 16px 0;
-    opacity: 0.6;
-    transition: opacity 0.3s, color 0.3s, transform 0.3s;
-    text-align: center;
-    cursor: pointer;
-    color: #ffffffc4;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-  }
-  .lyric-line.active {
-    color: #ffffffff;
-    opacity: 1;
-    font-weight: 1000;
-    transform: scale(1.05);
-    text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
-  }
+      font-size: 24px;
+      margin: 16px 0;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s, transform 0.3s;
+      text-align: center;
+      cursor: pointer;
+      color: #ffffffc4;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    } 
+    .lyric-line.active {
+      color: #ffffffff;
+      opacity: 1;
+      font-weight: 1000;
+      transform: scale(1.05);
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+    }
+    #lyrics-content.translation-visible .translated-lyric-line {
+      display: block;
+    }
+    .lyric-line.active + .translated-lyric-line {
+      opacity: 0.8;
+      color: #ffffffff;
+    }
   `; 
   document.head.appendChild(styleEl);
 

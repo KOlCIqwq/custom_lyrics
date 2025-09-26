@@ -136,7 +136,7 @@ export function createLyricsPageUI(mainView: Element) {
               <option value="de">German</option>
               <option value="ja">Japanese</option>
               <option value="ko">Korean</option>
-              <option value="zh">Chinese</option>
+              <option value="zh-Hans">Chinese</option>
             </select>
           </div>
   
@@ -147,6 +147,15 @@ export function createLyricsPageUI(mainView: Element) {
               <input type="checkbox" id="setting-toggle-rotation" checked>
               <span class="slider round"></span>
             </label>
+          </div>
+
+          <!-- Translation -->
+          <div class="setting-option" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Translation</span>
+              <label class="switch">
+                <input type="checkbox" id="setting-toggle-translation">
+                <span class="slider round"></span>
+              </label>
           </div>
         </div>
       </div>
@@ -219,6 +228,9 @@ export function createLyricsPageUI(mainView: Element) {
         background-position: right 8px top 50%;
         background-size: .65em auto;
         padding-right: 24px;
+      }
+      #lyrics-scroll-container {
+        scrollbar-width: none;
       }
     `;
     document.head.appendChild(settingsStyleEl);

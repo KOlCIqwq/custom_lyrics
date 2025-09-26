@@ -21,6 +21,27 @@ export let scrolledAndStopped = false;
 export let isIdle = true;
 export let isPlainText = false;
 export let preferredLanguage: string = 'any';
+export let translatedLyrics: { time: number; line: string }[] = [];
+export let translationEnabled: boolean = true;
+export let firstTimeLoadTranslation: boolean = true;
+let activeLyricRequestUri: string | null = null;
+
+export const getActiveLyricRequestUri = () => activeLyricRequestUri;
+export const setActiveLyricRequestUri = (uri: string | null) => {
+  activeLyricRequestUri = uri;
+};
+
+export function setTfirstTimeLoadTranslation(enabled: boolean) {
+  firstTimeLoadTranslation = enabled;
+}
+
+export function setTranslationEnabled(enabled: boolean) {
+  translationEnabled = enabled;
+}
+
+export function setTranslatedLyrics(lyrics: { time: number; line: string }[]){
+  translatedLyrics = lyrics;
+}
 
 export function setPreferredLanguage(lang: string) {
   preferredLanguage = lang;
