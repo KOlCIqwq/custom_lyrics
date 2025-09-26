@@ -1,10 +1,12 @@
 import { lyricsPageActive } from '../state/lyricsState';
-import { showLyricsPage, closeLyricsPage, updateLyricsBackground, resetLyricsViewScroll, handleAlbumRotation } from '../components/lyricsPage';
+import { showLyricsPage, closeLyricsPage } from '../components/lyricsPage/index';
+import { updateLyricsBackground } from '../components/lyricsPage/ui';
 import { highlightInterval, setHighlightInterval, setCurrentHighlightedLine, setMemorizedSelectedText } from '../state/lyricsState';
 import { fetchAndDisplayLyrics } from '../utils/lyricsFetcher';
 import { createLyricsButton } from '../components/lyricsButton';
 import { updateAlbumImage } from '../utils/albumImageFetcher';
-
+import { handleAlbumRotation } from '../components/lyricsPage/utils';
+import { resetLyricsViewScroll } from '../components/lyricsPage/utils';
 declare global {
   interface Window {
     Spicetify: any;
