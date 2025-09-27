@@ -1,4 +1,3 @@
-import { translateAPiSite} from '../secrets/secrets'
 import { getActiveLyricRequestUri, preferredLanguage, setPreferredLanguage, setTranslatedLyrics, translationEnabled } from '../state/lyricsState';
 import { insertTranslations } from './lyricsFetcher';
 declare global {
@@ -16,6 +15,8 @@ declare global {
     3. We don't pass the timestamp, since it will be useless and waste of words
         3.1 For each [End of Line] we represent it with '@@'
             Then process all of them assigning them to each lyrics line
+        3.2 Adding [EOL] will lead translator to pice togheter some phrase, instead wrap the
+            entire line in a <l></l>, to let it understand
 */
 
 type Language = {
@@ -57,7 +58,9 @@ type TranslatedLyrics = {
 } */
 
 async function translate(query:string){
-    const baseUrl = translateAPiSite;
+    // Just a temporary self-hosted translation site...
+    // Probably will be closed or use llm api to translate...
+    const baseUrl = 'https://k-sepia-six.vercel.app/api/translate';
     try{
         if (preferredLanguage == 'zh'){
             setPreferredLanguage('zh-Hans');
@@ -82,12 +85,19 @@ async function translate(query:string){
 
 function stickTranslationLyrics(lyrics: { time: number; line: string }[], outputQuery:string){
     // This should be the same size of lyrics
-    const parts = outputQuery.split("@@");
+    const parts = outputQuery.split("</l>"); 
+
     let translatedLyrics:TranslatedLyrics[] = [];
-    for (let i = 0; i < lyrics.length; i++){
-        if (parts[i]) {
-            translatedLyrics.push({time:lyrics[i].time,line:parts[i]})
-        }
+
+    const filteredParts = parts.filter(p => p.includes('<l>'));
+
+    for (const part of filteredParts) {
+        const cleanLine = part.replace('<l>', '').trim();
+        translatedLyrics.push({ time: 0, line: cleanLine }); // We'll add the time back next
+    }
+
+    for (let i = 0; i < Math.min(lyrics.length, translatedLyrics.length); i++) {
+        translatedLyrics[i].time = lyrics[i].time;
     }
     return translatedLyrics;
 }
@@ -101,10 +111,11 @@ export async function processFullLyrics(lyrics: { time: number; line: string }[]
     let outputQuery = "";
     let batchQuery = "";
     for (let i = 0; i < lyrics.length; i++){
-        if (lyrics[i].line.length + length_count < 800){
+        const lineAsHtml = `<l>${lyrics[i].line}</l>`;
+        if (lineAsHtml.length + length_count < 800){
             // If we still can fit this lyrics line
-            batchQuery += lyrics[i].line + "@@";
-            length_count += lyrics[i].line.length + 2;
+            batchQuery += lineAsHtml
+            length_count += lineAsHtml.length;
         }else{
             const data = await translate(batchQuery);
             if (requestUri !== getActiveLyricRequestUri()) {
@@ -117,10 +128,8 @@ export async function processFullLyrics(lyrics: { time: number; line: string }[]
                 outputQuery += data.translation;
             }
             // Reset the batch
-            batchQuery = "";
-            length_count = 0
-            batchQuery = lyrics[i].line + "@@";
-            length_count += 2;
+            batchQuery = lineAsHtml;
+            length_count = lineAsHtml.length;
         }
     }
     if (batchQuery != null){

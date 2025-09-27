@@ -146,7 +146,7 @@ export async function fetchAndDisplayLyrics() {
       artistsname.push(artist.name);
     }
 
-    const success = await trySearchAPI(artists, title, duration_in_seconds, album_name, requestedTrackUri,careSearchPlainLyrics);
+    const success = await trySearchAPI(artistsname, title, duration_in_seconds, album_name, requestedTrackUri,careSearchPlainLyrics);
 
     if (!success) {
       // Final check before showing an error
@@ -189,7 +189,7 @@ async function trySearchAPI(artists:Array<string>,
     const songs: Song[] = await response.json();
 
     for (const song of songs){
-      if (song.trackName === title && song.duration === duration){
+      if (song.trackName === title && Math.abs(song.duration - duration) < 10){
         // Highly confident that this is right song
         displaySyncedLyrics(song,requestedTrackUri);
         return true;
@@ -302,6 +302,8 @@ export function displaySyncedLyrics(data: Song, trackUri: string) {
       .filter(Boolean)
       .forEach((line: string) => currentLyrics.push({ time: 99999999, line }));
     setIsPlainText(true);
+    processFullLyrics(currentLyrics,trackUri); 
+    setTfirstTimeLoadTranslation(false);
   }
 
   if (contentEl) {
@@ -444,4 +446,11 @@ export function displaySyncedLyrics(data: Song, trackUri: string) {
       }
     }, 250), // Interval can be a bit faster for better accuracy
   );
+}
+
+export function resetToCurrentHighlightedLine(){
+  if (currentHighlightedLine) {
+    const currentActiveEl = document.getElementById(currentHighlightedLine);
+    currentActiveEl?.scrollIntoView({ behavior:'smooth', block: 'center'});
+  }
 }

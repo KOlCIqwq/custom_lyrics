@@ -19,7 +19,7 @@ import {
     translatedLyrics,
     setTranslatedLyrics,
 } from '../../state/lyricsState';
-import { fetchAndDisplayLyrics, handleTranslations } from '../../utils/lyricsFetcher';
+import { fetchAndDisplayLyrics, handleTranslations, resetToCurrentHighlightedLine } from '../../utils/lyricsFetcher';
 import { processFullLyrics } from '../../utils/translate';
 import { closeLyricsPage } from './index';
 import { pauseRotation, resumeRotation } from './utils';
@@ -71,7 +71,7 @@ export function attachEventHandlers(lyricsContainer: HTMLElement) {
       }
       scrollTimeout = setTimeout(() => {
         setScrolledAndStopped(true);
-      }, 2000);
+      }, 3000);
     };
   
     // Attach global events (copy, context menu, keyboard) to the main container
@@ -178,7 +178,9 @@ export function attachEventHandlers(lyricsContainer: HTMLElement) {
             // Update state and save to local storage
             setPreferredLanguage(newLanguage);
             Spicetify.LocalStorage.set('lyrics-plus-language', newLanguage);
-            Spicetify.showNotification(`Lyrics language set to: ${languageSelect.options[languageSelect.selectedIndex].text}`);
+            //Spicetify.showNotification(`Lyrics language set to: ${languageSelect.options[languageSelect.selectedIndex].text}`);
+            // Reset the translated lyrics
+            fetchAndDisplayLyrics();
           });
         }
       
@@ -216,6 +218,7 @@ export function attachEventHandlers(lyricsContainer: HTMLElement) {
               return;
             }
             handleTranslations();
+            resetToCurrentHighlightedLine();
             Spicetify.LocalStorage.set('translation-enabled', translateToggle.checked.toString());
             //Spicetify.showNotification(`Translations ${translateToggle.checked ? 'Enabled' : 'Disabled'}`);
           });

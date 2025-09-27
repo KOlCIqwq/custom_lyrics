@@ -1,7 +1,7 @@
 [
   {
-    "name": "Custom Lyrics",
-    "description": "Spicetify extension to show Lyrics",
+    "name": "Simple Lyrics",
+    "description": "Spicetify extension to show Lyrics, with some useful functions",
     "preview": "marketplace.png",
     "main": "./built/custom_lyrics.js",
     "readme": "README.md",
@@ -10,7 +10,7 @@
         { "name": "KOlCI", "url": "https://github.com/KOlCIqwq" }
     ],
     "tags": [
-      "lyrics"
+      "lyrics", "copy","translate","translation"
     ]
   }
 ]
