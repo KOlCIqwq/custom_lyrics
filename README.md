@@ -9,8 +9,8 @@ Spotify sometimes fails to fetch them, even when Musixmatch has them, so I built
 - Fetch the lyrics
 - Copy it
 - Autofocus
-- Spinning uweuwuw
-- Translation (TODO)
+- Spinning record uweuwuw
+- Translation
 
 ## Use it
 Use it with [Spicetify](https://github.com/spicetify/spicetify-cli)
