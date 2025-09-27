@@ -3,7 +3,7 @@ I enjoy singing, but I get stuck when I do not know the lyrics.
 
 Spotify sometimes fails to fetch them, even when Musixmatch has them, so I built my own.
 
-![Screenshot](https://raw.githubusercontent.com/KOlCIqwq/custom_lyrics/refs/heads/main/custom-lyrics.png)
+![Thumbnail](./simple-lyrics.gif)
 
 ## Features
 - Fetch the lyrics
