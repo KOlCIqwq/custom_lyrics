@@ -2,7 +2,7 @@
   {
     "name": "Simple Lyrics",
     "description": "Spicetify extension to show Lyrics, with some useful functions",
-    "preview": "marketplace.png",
+    "preview": "simple-lyrics.gif",
     "main": "./built/custom_lyrics.js",
     "readme": "README.md",
     "branch": "main",
